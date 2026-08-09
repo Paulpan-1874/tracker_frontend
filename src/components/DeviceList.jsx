@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { formatLastSeen, formatVbat } from '../utils'
 
 // 电池图标: 四格电, 颜色随总电量: 3-4格=绿, 2格=黄, 1格=红
@@ -25,9 +26,13 @@ function BatteryIcon({ mv }) {
   )
 }
 
-// 右上角定位信息: 状态 + 用时 (未定位/未响应时用时显示 "—")
+// 定位信息: 状态 + 用时; 定位中时用 retained 消息里的搜星起点 time 实时计时
 function locInfo(d) {
-  if (d.locating) return { key: 'locating', text: '定位中…', dur: null }
+  if (d.locating) {
+    const start = Date.parse(d.location && d.location.time)
+    const dur = isNaN(start) ? null : Math.max(0, Math.floor((Date.now() - start) / 1000))
+    return { key: 'locating', text: '定位中…', dur }
+  }
   const loc = d.location
   if (loc && loc.status === 'ok') return { key: 'ok', text: '定位成功', dur: loc.duration }
   if (loc && loc.status === 'failed') return { key: 'failed', text: '定位失败', dur: loc.duration }
@@ -36,6 +41,15 @@ function locInfo(d) {
 }
 
 export default function DeviceList({ devices, onSelect }) {
+  // 有设备在搜星时每秒刷新一次, 驱动定位中计时跳动
+  const anyLocating = devices.some((d) => d.locating)
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    if (!anyLocating) return
+    const timer = setInterval(() => setTick((t) => t + 1), 1000)
+    return () => clearInterval(timer)
+  }, [anyLocating])
+
   if (!devices.length) {
     return (
       <div className="empty">
@@ -57,7 +71,7 @@ export default function DeviceList({ devices, onSelect }) {
           d.imei,
           d.online ? '在线' : '离线',
           vbat != null ? formatVbat(vbat) : null,
-          formatLastSeen(d.lastSeen)
+          d.online ? null : formatLastSeen(d.lastSeen)
         ]
           .filter(Boolean)
           .join(' · ')
@@ -70,27 +84,29 @@ export default function DeviceList({ devices, onSelect }) {
             title={tip}
           >
             <div className="tile-top">
-              {/* 左上: 卫星组件 (图标 + 耗时/状态), 右上: 电池图标 */}
-              <div className={`tile-loc tile-state-${loc.key}`}>
-                <span className="tile-loc-icon">🛰️</span>
-                <span className="tile-loc-info">
-                  {loc.dur != null && <span className="tile-dur">{loc.dur}秒</span>}
-                  <span className="tile-state">{loc.text}</span>
-                </span>
-              </div>
+              {/* 第一行: IMEI(自适应截断) + 电池图标 */}
+              <span className="tile-imei">{d.imei}</span>
               {vbat != null && (
                 <span className="tile-vbat" title={formatVbat(vbat)}>
                   <BatteryIcon mv={vbat} />
                 </span>
               )}
             </div>
-            {/* 第二行: IMEI(自适应截断) */}
-            <span className="tile-imei">{d.imei}</span>
+            {/* 第二行: 天线组件 (图标 + 耗时/状态), 独立一行 */}
+            <div className={`tile-loc tile-state-${loc.key}`}>
+              <span className={`tile-loc-icon ${loc.key === 'locating' ? 'searching' : ''}`}>📡</span>
+              <span className="tile-loc-info">
+                {/* 耗时行始终占位: 无耗时时隐身, 保证状态文字位置不跳动 */}
+                <span className={`tile-dur ${loc.dur == null ? 'dur-empty' : ''}`}>{loc.dur != null ? `${loc.dur}秒` : '秒'}</span>
+                <span className="tile-state">{loc.text}</span>
+              </span>
+            </div>
             {/* 底部: 小指示灯 + 在线文字(左), 最近上报(右) */}
             <div className="tile-foot">
               <span className={`tile-lamp ${d.online ? 'lamp-on' : 'lamp-off'}`} />
               <span className="tile-net">{d.online ? '在线' : '离线'}</span>
-              <span className="tile-time">{formatLastSeen(d.lastSeen)}</span>
+              {/* 在线时不显示最后时间 (在线本身就是最新状态) */}
+              {!d.online && <span className="tile-time">{formatLastSeen(d.lastSeen)}</span>}
             </div>
           </li>
         )
