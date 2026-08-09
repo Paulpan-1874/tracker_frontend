@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMqtt } from './hooks/useMqtt'
 import DeviceList from './components/DeviceList.jsx'
 import DeviceDetail from './components/DeviceDetail.jsx'
@@ -11,7 +11,9 @@ import { wgs84ToGcj02 } from './utils'
 function Console({ auth, onLogout }) {
   const { status, devices, sendCommand, sendBroadcast, clearBroadcast, broadcast } = useMqtt(auth.user.id)
   const [selected, setSelected] = useState(null)
-  const [drawerOpen, setDrawerOpen] = useState(false) // 顶栏底部下拉箭头展开的设备抽屉
+  const [drawerOpen, setDrawerOpen] = useState(false) // 面板底部抓手展开的设备抽屉
+  const swipeY = useRef(null) // 抽屉手势: 记录起始触点, 下滑展开/上滑收起
+  const justSwiped = useRef(false) // 手势触发后吞掉随后的 click, 避免抽屉被立刻弹回
   const [ownedImeis, setOwnedImeis] = useState(null) // null=加载中, []=无设备
   const [loadError, setLoadError] = useState('')
 
@@ -83,7 +85,7 @@ function Console({ auth, onLogout }) {
         <FleetMap points={gpsPoints} />
       </div>
 
-      {/* 浮动控制面板: 菜单行 + 定位状态灯阵 (3行×30列) + 常用操作按钮 + 底部下拉箭头 */}
+      {/* 浮动控制面板: 菜单行 + 定位状态灯阵 (3行×30列) + 底部抽屏抓手 */}
       <header className="topbar topbar-merged">
         <div className="topbar-row">
           <div className="topbar-title">
@@ -130,24 +132,20 @@ function Console({ auth, onLogout }) {
                 )
               })}
             </div>
-            {/* 灯阵下方: 满宽常用操作按钮 */}
-            <button
-              className={`broadcast-btn full ${broadcastActive ? 'lit' : ''}`}
-              onClick={toggleBroadcast}
-              disabled={status !== 'connected'}
-            >
-              {broadcastActive ? (
-                <>
-                  等待设备上线，再次点击可取消
-                  <span className="btn-spinner" />
-                </>
-              ) : (
-                '开始定位'
-              )}
-            </button>
-            {/* 设备抽屉: 高度固定, 设备卡片一行四个, 可滑动 */}
+            {/* 设备抽屉: 高度固定, 设备卡片一行四个, 可滑动; 上滑可收起 */}
             {drawerOpen && (
-              <div className="device-drawer">
+              <div
+                className="device-drawer"
+                onTouchStart={(e) => (swipeY.current = e.touches[0].clientY)}
+                onTouchMove={(e) => {
+                  if (swipeY.current == null) return
+                  if (swipeY.current - e.touches[0].clientY > 40) {
+                    setDrawerOpen(false)
+                    swipeY.current = null
+                    justSwiped.current = true
+                  }
+                }}
+              >
                 {loadError && <div className="cmd-result fail">{loadError}</div>}
                 {ownedImeis === null ? (
                   <div className="empty">
@@ -165,13 +163,52 @@ function Console({ auth, onLogout }) {
                 )}
               </div>
             )}
-            {/* 底部下拉箭头: 展开/收起设备抽屉 */}
-            <button className="drawer-toggle" onClick={() => setDrawerOpen(!drawerOpen)}>
-              {drawerOpen ? '▲' : '▼'}
+            {/* 底部抽屏抓手: 点按或下滑展开 (底部抽屉风格, 弱化成一条窄边减少误触面积) */}
+            <button
+              className="drawer-grip"
+              onClick={() => {
+                if (justSwiped.current) {
+                  justSwiped.current = false
+                  return
+                }
+                setDrawerOpen(!drawerOpen)
+              }}
+              onTouchStart={(e) => (swipeY.current = e.touches[0].clientY)}
+              onTouchMove={(e) => {
+                if (swipeY.current == null) return
+                const dy = e.touches[0].clientY - swipeY.current
+                if (dy > 30 && !drawerOpen) {
+                  setDrawerOpen(true)
+                  swipeY.current = null
+                  justSwiped.current = true
+                } else if (dy < -30 && drawerOpen) {
+                  setDrawerOpen(false)
+                  swipeY.current = null
+                  justSwiped.current = true
+                }
+              }}
+            >
+              <span className="grip-pill" />
             </button>
           </>
         )}
       </header>
+
+      {/* 页面底部悬浮操作栏: 一键定位按钮 (独立于顶部面板, 随时可触达) */}
+      <button
+        className={`broadcast-btn full bottom ${broadcastActive ? 'lit' : ''}`}
+        onClick={toggleBroadcast}
+        disabled={status !== 'connected'}
+      >
+        {broadcastActive ? (
+          <>
+            等待设备上线，再次点击可取消
+            <span className="btn-spinner" />
+          </>
+        ) : (
+          '开始定位'
+        )}
+      </button>
 
       {/* 设备详情: 沿用左侧悬浮抽屉, 返回后重新展开设备抽屉 */}
       {current && (

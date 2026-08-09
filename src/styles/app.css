@@ -352,10 +352,10 @@ html, body {
   cursor: pointer;
 }
 .map-layer-btn:active { opacity: 0.7; }
-/* 全屏地图: 切换按钮移到右下角 (右上角已被悬浮顶栏占据) */
+/* 全屏地图: 切换按钮移到右下角, 悬在底部操作栏上方 (右上角已被悬浮顶栏占据) */
 .app-full .map-layer-btn {
   top: auto;
-  bottom: calc(10px + env(safe-area-inset-bottom));
+  bottom: calc(64px + env(safe-area-inset-bottom));
 }
 .map-error {
   padding: 24px 12px;
@@ -556,8 +556,19 @@ html, body {
   cursor: default;
 }
 .panel-lamp:active { opacity: 0.7; }
-/* 收起态灯阵下方的满宽常用操作按钮 */
+/* 满宽广播按钮 (配合 .bottom 用作页面底部悬浮操作栏) */
 .broadcast-btn.full { width: 100%; }
+
+/* 页面底部悬浮操作栏: 一键定位按钮独立于顶部面板, 随时可触达 */
+.broadcast-btn.bottom {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: calc(10px + env(safe-area-inset-bottom));
+  z-index: 285; /* 压在详情抽屉 (290) 之下, 详情展开时自动让位 */
+  width: auto;
+  box-shadow: 0 4px 16px rgba(2, 6, 23, 0.45);
+}
 
 /* 广播等待中的旋转环形进度条 (按钮末尾) */
 .btn-spinner {
@@ -604,24 +615,34 @@ html, body {
 .topbar-title h1 { margin: 0; font-size: 15px; font-weight: 700; }
 .topbar-title .sub { margin: 0; font-size: 11px; color: var(--text-dim); }
 
-/* 控制面板底部的下拉箭头: 展开/收起设备抽屉 */
-.drawer-toggle {
-  align-self: center;
+/* 面板底部的抽屏抓手: 一条窄边 + 居中药条, 点按或下滑展开 (弱化视觉/减小误触面积) */
+.drawer-grip {
+  align-self: stretch;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 12px;
+  margin: -4px 0; /* 抵消顶栏内边距, 让抓手贴紧卡片下缘 */
   border: none;
   background: none;
-  padding: 0 16px;
-  color: var(--text-dim);
-  font-size: 10px;
-  line-height: 1;
+  padding: 0;
   cursor: pointer;
+  touch-action: none; /* 抓住手势交给 JS 处理, 禁止浏览器带着页面滑动/下拉刷新 */
 }
-.drawer-toggle:active { opacity: 0.7; }
+.grip-pill {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(148, 163, 184, 0.45);
+}
+.drawer-grip:active .grip-pill { background: rgba(148, 163, 184, 0.8); }
 
 /* 设备抽屉: 高度固定, 内部可滑动; 卡片一行四个左右对齐 */
 .device-drawer {
   width: 100%;
   max-height: 264px;
   overflow-y: auto;
+  overscroll-behavior: contain; /* 抽屉滚到头后不把滑动传递给外层页面 */
 }
 .device-drawer .device-grid {
   grid-template-columns: repeat(4, minmax(60px, 140px));
