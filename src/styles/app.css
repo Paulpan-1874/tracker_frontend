@@ -590,21 +590,33 @@ html, body {
 .topbar-title h1 { margin: 0; font-size: 15px; font-weight: 700; }
 .topbar-title .sub { margin: 0; font-size: 11px; color: var(--text-dim); }
 
-/* 面板开关按钮 */
-.panel-toggle {
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
+/* 控制面板底部的下拉箭头: 展开/收起设备抽屉 */
+.drawer-toggle {
+  align-self: center;
   border: none;
-  border-radius: 8px;
-  background: var(--panel-2);
-  color: var(--text);
-  font-size: 15px;
+  background: none;
+  padding: 0 16px;
+  color: var(--text-dim);
+  font-size: 10px;
+  line-height: 1;
   cursor: pointer;
 }
-.panel-toggle:active { opacity: 0.7; }
+.drawer-toggle:active { opacity: 0.7; }
 
-/* 左侧操作面板: 广播按钮 + 设备列表 / 设备详情 */
+/* 设备抽屉: 高度固定, 内部可滑动; 卡片一行四个左右对齐 */
+.device-drawer {
+  width: 100%;
+  max-height: 264px;
+  overflow-y: auto;
+}
+.device-drawer .device-grid {
+  grid-template-columns: repeat(4, minmax(60px, 140px));
+  justify-content: space-between;
+  margin: 0;
+}
+.device-drawer .empty { padding: 24px 12px; }
+
+/* 左侧详情抽屉: 广播按钮 + 设备详情 */
 .panel {
   position: absolute;
   top: calc(64px + env(safe-area-inset-top));

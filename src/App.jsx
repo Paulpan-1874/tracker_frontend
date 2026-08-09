@@ -11,7 +11,7 @@ import { wgs84ToGcj02 } from './utils'
 function Console({ auth, onLogout }) {
   const { status, devices, sendCommand, sendBroadcast, clearBroadcast, broadcast } = useMqtt(auth.user.id)
   const [selected, setSelected] = useState(null)
-  const [panelOpen, setPanelOpen] = useState(true) // 左侧操作面板 (全屏地图之上的抽屉)
+  const [drawerOpen, setDrawerOpen] = useState(false) // 顶栏底部下拉箭头展开的设备抽屉
   const [ownedImeis, setOwnedImeis] = useState(null) // null=加载中, []=无设备
   const [loadError, setLoadError] = useState('')
 
@@ -83,12 +83,9 @@ function Console({ auth, onLogout }) {
         <FleetMap points={gpsPoints} />
       </div>
 
-      {/* 浮动顶栏: 标题 + 连接状态 + 面板开关; 收起时拼入定位状态灯阵 (3行×30列) 与操作按钮 */}
-      <header className={`topbar ${!panelOpen ? 'topbar-merged' : ''}`}>
+      {/* 浮动控制面板: 菜单行 + 定位状态灯阵 (3行×30列) + 常用操作按钮 + 底部下拉箭头 */}
+      <header className="topbar topbar-merged">
         <div className="topbar-row">
-          <button className="panel-toggle" onClick={() => setPanelOpen(!panelOpen)}>
-            {panelOpen ? '✕' : '☰'}
-          </button>
           <div className="topbar-title">
             <h1>设备控制台</h1>
             <p className="sub">
@@ -108,9 +105,10 @@ function Console({ auth, onLogout }) {
             退出
           </button>
         </div>
-        {/* 收起时: 灯阵概览设备定位状态 (未定位不亮, 定位中黄灯呼吸, 定位成功绿灯常亮) */}
-        {!panelOpen && (
+        {/* 详情打开时控制面板收回单行; 灯阵/按钮/抽屉仅在总览态显示 */}
+        {!current && (
           <>
+            {/* 灯阵概览设备定位状态 (未定位不亮, 定位中黄灯呼吸, 定位成功绿灯常亮) */}
             <div className="panel-lamps">
               {/* 固定 90 个坑位 (3行×30列): 设备占前 N 格, 多余坑位保留灯框 */}
               {Array.from({ length: Math.max(list.length, 90) }).map((_, i) => {
@@ -125,8 +123,8 @@ function Console({ auth, onLogout }) {
                     className={`panel-lamp ${cls}`}
                     title={`${d.imei} · ${text}`}
                     onClick={() => {
+                      setDrawerOpen(false)
                       setSelected(d.imei)
-                      setPanelOpen(true)
                     }}
                   />
                 )
@@ -140,36 +138,45 @@ function Console({ auth, onLogout }) {
             >
               {broadcastActive ? '取消定位' : '开始定位'}
             </button>
+            {/* 设备抽屉: 高度固定, 设备卡片一行四个, 可滑动 */}
+            {drawerOpen && (
+              <div className="device-drawer">
+                {loadError && <div className="cmd-result fail">{loadError}</div>}
+                {ownedImeis === null ? (
+                  <div className="empty">
+                    <div className="empty-icon">⏳</div>
+                    <p>正在加载设备列表…</p>
+                  </div>
+                ) : (
+                  <DeviceList
+                    devices={list}
+                    onSelect={(imei) => {
+                      setDrawerOpen(false)
+                      setSelected(imei)
+                    }}
+                  />
+                )}
+              </div>
+            )}
+            {/* 底部下拉箭头: 展开/收起设备抽屉 */}
+            <button className="drawer-toggle" onClick={() => setDrawerOpen(!drawerOpen)}>
+              {drawerOpen ? '▲' : '▼'}
+            </button>
           </>
         )}
       </header>
 
-      {panelOpen && (
+      {/* 设备详情: 沿用左侧悬浮抽屉, 返回后重新展开设备抽屉 */}
+      {current && (
         <aside className="panel">
-          {current ? (
-            <DeviceDetail device={current} onBack={() => setSelected(null)} sendCommand={sendCommand} />
-          ) : (
-            <>
-              <div className="panel-head">
-                <button
-                  className={`broadcast-btn ${broadcastActive ? 'lit' : ''}`}
-                  onClick={toggleBroadcast}
-                  disabled={status !== 'connected'}
-                >
-                  {broadcastActive ? '● 定位广播已开启，点击撤回' : '📍 一键定位所有设备'}
-                </button>
-                {loadError && <div className="cmd-result fail">{loadError}</div>}
-              </div>
-              {ownedImeis === null ? (
-                <div className="empty">
-                  <div className="empty-icon">⏳</div>
-                  <p>正在加载设备列表…</p>
-                </div>
-              ) : (
-                <DeviceList devices={list} onSelect={setSelected} />
-              )}
-            </>
-          )}
+          <DeviceDetail
+            device={current}
+            onBack={() => {
+              setSelected(null)
+              setDrawerOpen(true)
+            }}
+            sendCommand={sendCommand}
+          />
         </aside>
       )}
     </div>
