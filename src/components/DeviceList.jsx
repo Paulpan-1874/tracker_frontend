@@ -1,5 +1,30 @@
 import { formatLastSeen, formatVbat } from '../utils'
 
+// 电池图标: 四格电, 颜色随总电量: 3-4格=绿, 2格=黄, 1格=红
+// 电压映射: 3400mV=空 → 4200mV=满 (锂电工作区间)
+function BatteryIcon({ mv }) {
+  const pct = Math.min(1, Math.max(0, (mv - 3400) / 800))
+  const lit = Math.round(pct * 4)
+  const color = lit >= 3 ? 'var(--green)' : lit === 2 ? '#fbbf24' : 'var(--red)'
+  return (
+    <svg className="batt" viewBox="0 0 22 11" width="20" height="10" aria-hidden="true">
+      <rect x="0.5" y="0.5" width="18.5" height="10" rx="2" fill="none" stroke="currentColor" />
+      <rect x="19.8" y="3" width="1.7" height="5" rx="0.8" fill="currentColor" />
+      {[0, 1, 2, 3].map((i) => (
+        <rect
+          key={i}
+          x={2 + i * 4}
+          y="2"
+          width="3.2"
+          height="7"
+          rx="0.8"
+          fill={i < lit ? color : 'rgba(148, 163, 184, 0.18)'}
+        />
+      ))}
+    </svg>
+  )
+}
+
 // 右上角定位信息: 状态 + 用时 (未定位/未响应时用时显示 "—")
 function locInfo(d) {
   if (d.locating) return { key: 'locating', text: '定位中…', dur: null }
@@ -47,7 +72,12 @@ export default function DeviceList({ devices, onSelect }) {
               <span className="tile-imei">{d.imei}</span>
               {/* 右上: 电量在顶, 下面卫星天线图标 + 定位状态/用时两行 */}
               <div className="tile-right">
-                {t.vbat != null && <span className="tile-vbat">{formatVbat(t.vbat)}</span>}
+                {t.vbat != null && (
+                  <span className="tile-vbat">
+                    <BatteryIcon mv={t.vbat} />
+                    {formatVbat(t.vbat)}
+                  </span>
+                )}
                 <div className={`tile-loc tile-state-${loc.key}`}>
                   <span className="tile-loc-icon">📡</span>
                   <span className="tile-loc-info">

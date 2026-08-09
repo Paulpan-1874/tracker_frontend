@@ -129,7 +129,16 @@ html, body {
   gap: 2px;
   flex-shrink: 0;
 }
-.tile-vbat { font-size: 9px; color: var(--text-dim); line-height: 1.2; }
+.tile-vbat {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
+  color: var(--text-dim);
+  line-height: 1.2;
+}
+/* 电池图标描边跟随文字色, 格色由组件内联控制 */
+.batt { color: var(--text-dim); flex-shrink: 0; }
 /* 定位信息: 卫星图标 + 状态/用时两行 */
 .tile-loc {
   display: flex;
