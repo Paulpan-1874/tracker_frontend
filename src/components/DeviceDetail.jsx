@@ -49,7 +49,7 @@ export default function DeviceDetail({ device, onBack, sendCommand }) {
         <h3>最新状态</h3>
         <Row k="信号 RSSI" v={t.rssi} />
         <Row k="信号 CSQ" v={t.csq} />
-        <Row k="电池电压" v={formatVbat(t.vbat)} />
+        <Row k="电池电压" v={formatVbat(t.vbat != null ? t.vbat : loc && loc.vbat)} />
         <Row k="ICCID" v={t.iccid} />
         <Row k="运行时长" v={t.uptime != null ? `${t.uptime} 秒` : undefined} />
         <Row k="上报时间" v={t.time} />

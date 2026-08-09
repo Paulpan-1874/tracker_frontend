@@ -51,10 +51,12 @@ export default function DeviceList({ devices, onSelect }) {
       {devices.map((d) => {
         const loc = locInfo(d)
         const t = d.telemetry || {}
+        // 电压优先取实时遥测; 设备休眠/页面刷新后无遥测时, 回退用 retained 位置里携带的 vbat
+        const vbat = t.vbat != null ? t.vbat : d.location && d.location.vbat != null ? d.location.vbat : null
         const tip = [
           d.imei,
           d.online ? '在线' : '离线',
-          t.vbat != null ? formatVbat(t.vbat) : null,
+          vbat != null ? formatVbat(vbat) : null,
           formatLastSeen(d.lastSeen)
         ]
           .filter(Boolean)
@@ -72,10 +74,10 @@ export default function DeviceList({ devices, onSelect }) {
               <span className="tile-imei">{d.imei}</span>
               {/* 右上: 电量在顶, 下面卫星天线图标 + 定位状态/用时两行 */}
               <div className="tile-right">
-                {t.vbat != null && (
+                {vbat != null && (
                   <span className="tile-vbat">
-                    <BatteryIcon mv={t.vbat} />
-                    {formatVbat(t.vbat)}
+                    <BatteryIcon mv={vbat} />
+                    {formatVbat(vbat)}
                   </span>
                 )}
                 <div className={`tile-loc tile-state-${loc.key}`}>
