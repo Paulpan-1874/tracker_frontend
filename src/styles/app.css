@@ -121,12 +121,14 @@ html, body {
 .tile-status-ok { color: var(--green); }
 .tile-failed { border-left-color: var(--red); }
 .tile-status-failed { color: var(--red); }
-.tile-noresp { border-left-color: #64748b; opacity: 0.8; }
+.tile-noresp { border-left-color: #64748b; }
 .tile-status-noresp { color: #94a3b8; }
 .tile-online { border-left-color: var(--green); }
 .tile-status-online { color: var(--green); }
-.tile-offline { border-left-color: #475569; opacity: 0.75; }
+.tile-offline { border-left-color: #475569; }
 .tile-status-offline { color: var(--text-dim); }
+/* 离线格子整体调暗: 即使带着定位结果也不会被误认为在线 */
+.device-tile.tile-off { opacity: 0.55; }
 
 .badge {
   font-size: 12px;

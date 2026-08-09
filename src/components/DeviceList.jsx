@@ -28,6 +28,7 @@ export default function DeviceList({ devices, onSelect }) {
         const t = d.telemetry || {}
         const tip = [
           d.imei,
+          d.online ? '在线' : '离线',
           t.vbat != null ? formatVbat(t.vbat) : null,
           formatLastSeen(d.lastSeen)
         ]
@@ -36,7 +37,8 @@ export default function DeviceList({ devices, onSelect }) {
         return (
           <li
             key={d.imei}
-            className={`device-tile tile-${s.key}`}
+            // 离线格子整体调暗 (定位中除外): 亮度 = 在线轴, 文案 = 状态轴
+            className={`device-tile tile-${s.key} ${!d.online && s.key !== 'locating' ? 'tile-off' : ''}`}
             onClick={() => onSelect(d.imei)}
             title={tip}
           >
