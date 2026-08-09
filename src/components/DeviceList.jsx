@@ -86,8 +86,12 @@ export default function DeviceList({ devices, onSelect }) {
                 <span className="tile-dur">{loc.dur != null ? `${loc.dur}秒` : '—'}</span>
               </span>
             </div>
-            {/* 底部: 最近上报 */}
-            <div className="tile-foot">{formatLastSeen(d.lastSeen)}</div>
+            {/* 底部: 小指示灯 + 在线文字(左), 最近上报(右) */}
+            <div className="tile-foot">
+              <span className={`tile-lamp ${d.online ? 'lamp-on' : 'lamp-off'}`} />
+              <span className="tile-net">{d.online ? '在线' : '离线'}</span>
+              <span className="tile-time">{formatLastSeen(d.lastSeen)}</span>
+            </div>
           </li>
         )
       })}

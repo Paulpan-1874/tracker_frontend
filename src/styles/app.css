@@ -150,11 +150,30 @@ html, body {
 .tile-state-noresp .tile-state { color: #94a3b8; }
 .tile-state-none .tile-state { color: var(--text-dim); }
 
-/* 第三行: 最近上报 */
+/* 第三行: 小指示灯 + 在线文字(左), 最近上报(右) */
 .tile-foot {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-size: 9px;
   color: var(--text-dim);
   white-space: nowrap;
+  overflow: hidden;
+}
+.tile-lamp {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.tile-lamp.lamp-on {
+  background: var(--green);
+  box-shadow: 0 0 5px rgba(52, 211, 153, 0.8);
+}
+.tile-lamp.lamp-off { background: rgba(148, 163, 184, 0.4); }
+.tile-net { flex-shrink: 0; }
+.tile-time {
+  margin-left: auto;
   overflow: hidden;
   text-overflow: ellipsis;
 }
