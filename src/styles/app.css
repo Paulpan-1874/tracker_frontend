@@ -400,7 +400,11 @@ html, body {
   color: #fbbf24;
   animation: locating-pulse 1.2s ease-in-out infinite;
 }
-.chip-failed {
+.badge-success {
+  background: rgba(52, 211, 153, 0.15);
+  color: #34d399;
+}
+.badge-failed {
   background: rgba(248, 113, 113, 0.15);
   color: var(--red);
 }
