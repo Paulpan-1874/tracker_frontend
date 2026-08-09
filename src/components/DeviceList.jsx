@@ -1,5 +1,15 @@
 import { formatLastSeen, formatVbat } from '../utils'
 
+// 小方格状态优先级: 定位中 > 定位结果 > 未响应 > 在线/离线
+// 一台设备一个格子, 设备多时一屏扫完; 电压/最近收到放进悬停提示
+function tileStatus(d) {
+  if (d.locating) return { key: 'locating', text: '定位中…' }
+  if (d.location && d.location.status === 'ok') return { key: 'ok', text: '定位成功' }
+  if (d.location && d.location.status === 'failed') return { key: 'failed', text: '定位失败' }
+  if (d.noResponse) return { key: 'noresp', text: '未响应' }
+  return d.online ? { key: 'online', text: '在线' } : { key: 'offline', text: '离线' }
+}
+
 export default function DeviceList({ devices, onSelect }) {
   if (!devices.length) {
     return (
@@ -12,43 +22,29 @@ export default function DeviceList({ devices, onSelect }) {
   }
 
   return (
-    <ul className="device-list">
+    <ul className="device-grid">
       {devices.map((d) => {
+        const s = tileStatus(d)
         const t = d.telemetry || {}
+        const tip = [
+          d.imei,
+          t.vbat != null ? formatVbat(t.vbat) : null,
+          formatLastSeen(d.lastSeen)
+        ]
+          .filter(Boolean)
+          .join(' · ')
         return (
           <li
             key={d.imei}
-            className={`device-card ${d.online ? 'online' : 'offline'}`}
+            className={`device-tile tile-${s.key}`}
             onClick={() => onSelect(d.imei)}
+            title={tip}
           >
-            <div className="device-top">
-              <span className="imei">{d.imei}</span>
-              <span className="badges">
-                {d.noResponse && (
-                  <span className="badge badge-noresp" title="本次广播后未上报定位, 可能没电或未上线">
-                    未响应
-                  </span>
-                )}
-                {/* 定位状态槽位: 定位中 → 成功/失败 原地轮转, 状态刷新一目了然 */}
-                {d.locating && <span className="badge badge-locating">定位中…</span>}
-                {d.location && d.location.status === 'ok' && (
-                  <span className="badge badge-success">
-                    定位成功{d.location.duration != null ? ` · ${d.location.duration}秒` : ''}
-                  </span>
-                )}
-                {d.location && d.location.status === 'failed' && (
-                  <span className="badge badge-failed">定位失败</span>
-                )}
-                <span className={`badge ${d.online ? 'badge-online' : 'badge-offline'}`}>
-                  {d.online ? '在线' : '离线'}
-                </span>
-              </span>
-            </div>
-            <div className="device-meta">
-              {t.rssi != null && <span className="chip">信号 {t.rssi}</span>}
-              {t.vbat != null && <span className="chip">{formatVbat(t.vbat)}</span>}
-              <span className="chip">{formatLastSeen(d.lastSeen)}</span>
-            </div>
+            <span className="tile-imei">{d.imei}</span>
+            <span className={`tile-status tile-status-${s.key}`}>
+              <i className="tile-dot" />
+              {s.text}
+            </span>
           </li>
         )
       })}
