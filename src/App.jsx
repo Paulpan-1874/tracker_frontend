@@ -57,7 +57,7 @@ function Console({ auth, onLogout }) {
       const e = (d.events || [])
         .slice()
         .reverse()
-        .find((ev) => ev.event === 'gps_result' && ev.lat != null && ev.lng != null)
+        .find((ev) => (ev.event === 'gps_result' || ev.event === 'location') && ev.lat != null && ev.lng != null)
       if (!e) return null
       const g = wgs84ToGcj02(e.lat, e.lng)
       return { imei: e.imei || d.imei, lat: g.lat, lng: g.lng }

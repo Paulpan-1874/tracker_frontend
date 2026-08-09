@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import mqtt from 'mqtt'
-import { MQTT_URL, DATA_TOPIC, STATUS_TOPIC, cmdTopic, broadcastTopic, ONLINE_TIMEOUT_MS } from '../config'
+import { MQTT_URL, DATA_TOPIC, STATUS_TOPIC, LOCATION_TOPIC, cmdTopic, broadcastTopic, ONLINE_TIMEOUT_MS } from '../config'
 
 // 连接状态: connecting | connected | error
 // userId: 登录用户 id, 传入后自动订阅其广播主题并同步 retained 广播实况
@@ -23,7 +23,7 @@ export function useMqtt(userId) {
 
     client.on('connect', () => {
       setStatus('connected')
-      const topics = [DATA_TOPIC, STATUS_TOPIC]
+      const topics = [DATA_TOPIC, STATUS_TOPIC, LOCATION_TOPIC]
       if (userId) topics.push(broadcastTopic(userId))
       client.subscribe(topics, { qos: 0 })
     })
@@ -54,7 +54,7 @@ export function useMqtt(userId) {
       if (parts.length !== 3 || parts[0] !== 'device') return
       const imei = parts[1]
       const kind = parts[2]
-      if (kind !== 'data' && kind !== 'status') return
+      if (kind !== 'data' && kind !== 'status' && kind !== 'location') return
       let data = {}
       try {
         data = JSON.parse(payload.toString())
@@ -77,6 +77,20 @@ export function useMqtt(userId) {
               hasStatus: true,
               online: data.event !== 'offline',
               lastSeen: now
+            }
+          }
+        }
+
+        // 最后位置 (retained): 只进 events 供地图展示, 不覆盖 telemetry 遥测
+        if (kind === 'location') {
+          return {
+            ...prev,
+            [imei]: {
+              ...old,
+              imei,
+              lastSeen: now,
+              online: old.hasStatus ? old.online : true,
+              events: [...(old.events || []), data].slice(-30)
             }
           }
         }

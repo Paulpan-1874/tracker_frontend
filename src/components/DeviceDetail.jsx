@@ -19,10 +19,11 @@ export default function DeviceDetail({ device, onBack, sendCommand }) {
   const t = device.telemetry || {}
 
   // 取最近一次成功的 GPS 定位结果 (WGS-84), 纠偏为 GCJ-02 后交给高德
+  // 兼容实时 gps_result 与 retained location (刷新页面后仍有的最后位置)
   const gpsRaw = (device.events || [])
     .slice()
     .reverse()
-    .find((e) => e.event === 'gps_result' && e.lat != null && e.lng != null)
+    .find((e) => (e.event === 'gps_result' || e.event === 'location') && e.lat != null && e.lng != null)
   const gps = gpsRaw ? { ...gpsRaw, ...wgs84ToGcj02(gpsRaw.lat, gpsRaw.lng) } : null
 
   const handleSend = (action) => {

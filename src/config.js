@@ -8,9 +8,11 @@ export const PB_URL = 'http://149.88.75.117:8091'
 
 // ====== 主题约定 (与 v2 固件一致) ======
 // 设备上报: device/{imei}/data   下发指令: device/{imei}/cmd   在线状态: device/{imei}/status
+// 最后位置: device/{imei}/location (retained, 定位成功时覆盖更新, 刷新页面仍可展示)
 // 用户广播: user/{userId}/cmd_broadcast (retained, 设备上线即收到, 支持一键指挥所有设备)
 export const DATA_TOPIC = 'device/+/data'
 export const STATUS_TOPIC = 'device/+/status'
+export const LOCATION_TOPIC = 'device/+/location'
 export const cmdTopic = (imei) => `device/${imei}/cmd`
 export const broadcastTopic = (userId) => `user/${userId}/cmd_broadcast`
 
