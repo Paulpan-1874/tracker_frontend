@@ -7,7 +7,7 @@ function BatteryIcon({ mv }) {
   const lit = Math.round(pct * 4)
   const color = lit >= 3 ? 'var(--green)' : lit === 2 ? '#fbbf24' : 'var(--red)'
   return (
-    <svg className="batt" viewBox="0 0 22 11" width="20" height="10" aria-hidden="true">
+    <svg className="batt" viewBox="0 0 22 11" width="22" height="11" aria-hidden="true">
       <rect x="0.5" y="0.5" width="18.5" height="10" rx="2" fill="none" stroke="currentColor" />
       <rect x="19.8" y="3" width="1.7" height="5" rx="0.8" fill="currentColor" />
       {[0, 1, 2, 3].map((i) => (
@@ -70,22 +70,22 @@ export default function DeviceList({ devices, onSelect }) {
             title={tip}
           >
             <div className="tile-top">
-              {/* 第一行: IMEI(自适应截断) + 电池图标 */}
-              <span className="tile-imei">{d.imei}</span>
+              {/* 左上: 卫星组件 (图标 + 耗时/状态), 右上: 电池图标 */}
+              <div className={`tile-loc tile-state-${loc.key}`}>
+                <span className="tile-loc-icon">🛰️</span>
+                <span className="tile-loc-info">
+                  {loc.dur != null && <span className="tile-dur">{loc.dur}秒</span>}
+                  <span className="tile-state">{loc.text}</span>
+                </span>
+              </div>
               {vbat != null && (
                 <span className="tile-vbat" title={formatVbat(vbat)}>
                   <BatteryIcon mv={vbat} />
                 </span>
               )}
             </div>
-            {/* 第二行: 卫星天线图标 + 定位状态/用时 */}
-            <div className={`tile-loc tile-state-${loc.key}`}>
-              <span className="tile-loc-icon">📡</span>
-              <span className="tile-loc-info">
-                <span className="tile-state">{loc.text}</span>
-                <span className="tile-dur">{loc.dur != null ? `${loc.dur}秒` : '—'}</span>
-              </span>
-            </div>
+            {/* 第二行: IMEI(自适应截断) */}
+            <span className="tile-imei">{d.imei}</span>
             {/* 底部: 小指示灯 + 在线文字(左), 最近上报(右) */}
             <div className="tile-foot">
               <span className={`tile-lamp ${d.online ? 'lamp-on' : 'lamp-off'}`} />

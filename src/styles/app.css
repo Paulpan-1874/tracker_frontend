@@ -106,14 +106,14 @@ html, body {
   border-color: rgba(148, 163, 184, 0.18);
 }
 
-/* 第一行: 左IMEI 右电池图标 */
+/* 第一行: 左上卫星组件(图标+文字) 右上电池图标, 顶对齐 */
 .tile-top {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 6px;
 }
-/* IMEI 自适应截断 (后期支持自定义设备名) */
+/* 第二行: IMEI 自适应截断 (后期支持自定义设备名) */
 .tile-imei {
   font-size: 10px;
   font-weight: 600;
@@ -126,19 +126,19 @@ html, body {
 }
 /* 电池图标描边跟随文字色, 格色由组件内联控制 */
 .batt { color: var(--text-dim); flex-shrink: 0; }
-/* 第二行: 定位信息 (卫星图标 + 状态/用时两行) */
+/* 卫星组件: 图标 + 耗时/状态两行 */
 .tile-loc {
   display: flex;
   align-items: center;
   gap: 6px;
 }
-.tile-loc-icon { font-size: 12px; line-height: 1.2; }
+.tile-loc-icon { font-size: 15px; line-height: 1; }
 .tile-loc-info {
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
-.tile-state { font-size: 10px; line-height: 1.25; }
+.tile-state { font-size: 9px; line-height: 1.25; }
 .tile-dur { font-size: 9px; color: var(--text-dim); line-height: 1.25; }
 /* 定位状态色 */
 .tile-state-locating .tile-state {
