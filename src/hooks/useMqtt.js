@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import mqtt from 'mqtt'
-import { MQTT_URL, DATA_TOPIC, STATUS_TOPIC, cmdTopic, ONLINE_TIMEOUT_MS } from '../config'
+import { MQTT_URL, DATA_TOPIC, STATUS_TOPIC, cmdTopic, broadcastTopic, ONLINE_TIMEOUT_MS } from '../config'
 
 // 连接状态: connecting | connected | error
 export function useMqtt() {
@@ -130,5 +130,29 @@ export function useMqtt() {
     return true
   }, [])
 
-  return { status, devices, sendCommand }
+  // 广播指令到 user/{userId}/cmd_broadcast (retained):
+  // 常驻 Broker, 名下所有设备每次上线都会收到, 实现"一键指挥所有设备"
+  // cmd_id 唯一标识本次广播, 固件按其去重, 避免设备重复执行
+  const sendBroadcast = useCallback((userId, action) => {
+    const client = clientRef.current
+    if (!client || !client.connected || !userId) return false
+    const payload = {
+      action,
+      broadcast: true,
+      cmd_id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+      time: new Date().toISOString()
+    }
+    client.publish(broadcastTopic(userId), JSON.stringify(payload), { qos: 1, retain: true })
+    return true
+  }, [])
+
+  // 撤回广播: 发空 retained 消息清除 Broker 上的常驻指令
+  const clearBroadcast = useCallback((userId) => {
+    const client = clientRef.current
+    if (!client || !client.connected || !userId) return false
+    client.publish(broadcastTopic(userId), '', { qos: 1, retain: true })
+    return true
+  }, [])
+
+  return { status, devices, sendCommand, sendBroadcast, clearBroadcast }
 }

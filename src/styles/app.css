@@ -352,6 +352,37 @@ html, body {
 }
 .logout-btn:active { opacity: 0.7; }
 
+/* ===== 一键广播操作区 ===== */
+.broadcast-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+.broadcast-btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #04263a;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.broadcast-btn.ghost {
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: var(--text-dim);
+  font-weight: 400;
+}
+.broadcast-btn:disabled { opacity: 0.5; }
+.broadcast-btn:active { opacity: 0.8; }
+.broadcast-tip {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
 /* ===== 桌面端略宽 ===== */
 @media (min-width: 600px) {
   .app { padding-top: 8px; }
