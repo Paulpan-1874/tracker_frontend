@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react'
 import { useMqtt } from './hooks/useMqtt'
 import DeviceList from './components/DeviceList.jsx'
 import DeviceDetail from './components/DeviceDetail.jsx'
+import FleetMap from './components/FleetMap.jsx'
 import Login from './components/Login.jsx'
 import { getAuth, logout, fetchMyDevices } from './api'
+import { wgs84ToGcj02 } from './utils'
 
 // 登录后的控制台: 只显示当前用户名下的设备
 function Console({ auth, onLogout }) {
@@ -47,6 +49,20 @@ function Console({ auth, onLogout }) {
 
   const current = selected ? list.find((d) => d.imei === selected) : null
   const onlineCount = list.filter((d) => d.online).length
+
+  // 汇总名下所有设备的最近一次成功定位 (WGS-84 → GCJ-02), 供总览地图展示
+  // 新定位上报后 devices 更新 → 地图标记增量点亮
+  const gpsPoints = list
+    .map((d) => {
+      const e = (d.events || [])
+        .slice()
+        .reverse()
+        .find((ev) => ev.event === 'gps_result' && ev.lat != null && ev.lng != null)
+      if (!e) return null
+      const g = wgs84ToGcj02(e.lat, e.lng)
+      return { imei: e.imei || d.imei, lat: g.lat, lng: g.lng }
+    })
+    .filter(Boolean)
 
   // 一键定位开关: 点亮=下发 retained 广播; 再点=发空 retained 撤回
   const toggleBroadcast = () => {
@@ -109,7 +125,16 @@ function Console({ auth, onLogout }) {
       ) : current ? (
         <DeviceDetail device={current} onBack={() => setSelected(null)} sendCommand={sendCommand} />
       ) : (
-        <DeviceList devices={list} onSelect={setSelected} />
+        <>
+          <DeviceList devices={list} onSelect={setSelected} />
+          <section className="card">
+            <h3>
+              最近定位{' '}
+              {gpsPoints.length > 0 ? `(${gpsPoints.length}/${list.length} 台)` : '(等待定位上报)'}
+            </h3>
+            <FleetMap points={gpsPoints} />
+          </section>
+        </>
       )}
     </div>
   )
