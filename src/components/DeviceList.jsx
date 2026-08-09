@@ -23,13 +23,22 @@ export default function DeviceList({ devices, onSelect }) {
           >
             <div className="device-top">
               <span className="imei">{d.imei}</span>
-              <span className={`badge ${d.online ? 'badge-online' : 'badge-offline'}`}>
-                {d.online ? '在线' : '离线'}
+              <span className="badges">
+                {d.noResponse && (
+                  <span className="badge badge-noresp" title="本次广播后未上报定位, 可能没电或未上线">
+                    未响应
+                  </span>
+                )}
+                {d.locating && <span className="badge badge-locating">定位中…</span>}
+                <span className={`badge ${d.online ? 'badge-online' : 'badge-offline'}`}>
+                  {d.online ? '在线' : '离线'}
+                </span>
               </span>
             </div>
             <div className="device-meta">
               {t.rssi != null && <span className="chip">信号 {t.rssi}</span>}
               {t.vbat != null && <span className="chip">{formatVbat(t.vbat)}</span>}
+              {d.location && d.location.status === 'failed' && <span className="chip chip-failed">定位失败</span>}
               <span className="chip">{formatLastSeen(d.lastSeen)}</span>
             </div>
           </li>

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import mqtt from 'mqtt'
-import { MQTT_URL, DATA_TOPIC, STATUS_TOPIC, LOCATION_TOPIC, cmdTopic, broadcastTopic, ONLINE_TIMEOUT_MS } from '../config'
+import { MQTT_URL, DATA_TOPIC, STATUS_TOPIC, LOCATION_TOPIC, cmdTopic, locationTopic, broadcastTopic, ONLINE_TIMEOUT_MS } from '../config'
 
 // 连接状态: connecting | connected | error
 // userId: 登录用户 id, 传入后自动订阅其广播主题并同步 retained 广播实况
@@ -81,21 +81,26 @@ export function useMqtt(userId) {
           }
         }
 
-        // 最后位置 (retained): 只进 events 供地图展示, 不覆盖 telemetry 遥测
+        // 最后位置 (retained): 地图与定位状态的唯一数据源, 直接覆盖 location 字段, 不进 events
+        // status: locating(过程态) → ok/failed(结果态); 空 retained = 已清除 (撤回广播时前端批量清空)
         if (kind === 'location') {
+          if (!payload.length) {
+            return { ...prev, [imei]: { ...old, imei, location: null, locating: false } }
+          }
           return {
             ...prev,
             [imei]: {
               ...old,
               imei,
+              location: data,
+              locating: data.status === 'locating',
               lastSeen: now,
-              online: old.hasStatus ? old.online : true,
-              events: [...(old.events || []), data].slice(-30)
+              online: old.hasStatus ? old.online : true
             }
           }
         }
 
-        // 数据上报: 更新遥测; 不覆盖 retained 状态判定的在线性
+        // 数据上报: 只更新遥测; 定位状态不从 data 取 (唯一来源是 retained location)
         return {
           ...prev,
           [imei]: {
@@ -180,11 +185,15 @@ export function useMqtt(userId) {
     return true
   }, [])
 
-  // 撤回广播: 发空 retained 消息清除 Broker 上的常驻指令
-  const clearBroadcast = useCallback((userId) => {
+  // 撤回广播: 发空 retained 消息清除 Broker 上的常驻指令,
+  // 同时批量清空名下所有设备的 retained 位置 (定位会话收尾, 地图归零)
+  const clearBroadcast = useCallback((userId, imeis = []) => {
     const client = clientRef.current
     if (!client || !client.connected || !userId) return false
     client.publish(broadcastTopic(userId), '', { qos: 1, retain: true })
+    imeis.forEach((imei) => {
+      client.publish(locationTopic(imei), '', { qos: 1, retain: true })
+    })
     return true
   }, [])
 

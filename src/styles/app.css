@@ -389,6 +389,30 @@ html, body {
   color: var(--text-dim);
 }
 
+/* ===== 定位中状态 ===== */
+.badges {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.badge-locating {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  animation: locating-pulse 1.2s ease-in-out infinite;
+}
+.chip-failed {
+  background: rgba(248, 113, 113, 0.15);
+  color: var(--red);
+}
+.badge-noresp {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+}
+@keyframes locating-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
 /* ===== 桌面端略宽 ===== */
 @media (min-width: 600px) {
   .app { padding-top: 8px; }

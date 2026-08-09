@@ -18,12 +18,10 @@ export default function DeviceDetail({ device, onBack, sendCommand }) {
   const [lastCmd, setLastCmd] = useState(null)
   const t = device.telemetry || {}
 
-  // 取最近一次成功的 GPS 定位结果 (WGS-84), 纠偏为 GCJ-02 后交给高德
-  // 兼容实时 gps_result 与 retained location (刷新页面后仍有的最后位置)
-  const gpsRaw = (device.events || [])
-    .slice()
-    .reverse()
-    .find((e) => (e.event === 'gps_result' || e.event === 'location') && e.lat != null && e.lng != null)
+  // 最后定位结果 (唯一来源: retained location): 成功带坐标, 失败带 reason
+  const loc = device.location
+  const gpsFailed = loc && loc.status === 'failed'
+  const gpsRaw = !gpsFailed && loc && loc.lat != null ? loc : null
   const gps = gpsRaw ? { ...gpsRaw, ...wgs84ToGcj02(gpsRaw.lat, gpsRaw.lng) } : null
 
   const handleSend = (action) => {
@@ -41,6 +39,7 @@ export default function DeviceDetail({ device, onBack, sendCommand }) {
 
       <div className="detail-head">
         <h2>{device.imei}</h2>
+        {device.locating && <span className="badge badge-locating">定位中…</span>}
         <span className={`badge ${device.online ? 'badge-online' : 'badge-offline'}`}>
           {device.online ? '在线' : '离线'}
         </span>
@@ -100,6 +99,15 @@ export default function DeviceDetail({ device, onBack, sendCommand }) {
             >
               在高德地图中打开
             </a>
+          </div>
+        </section>
+      )}
+
+      {gpsFailed && (
+        <section className="card">
+          <h3>最近定位</h3>
+          <div className="cmd-result fail">
+            最后一次定位失败（{loc.reason === 'timeout' ? '搜星超时' : loc.reason || '原因未知'}）· {loc.time || ''}
           </div>
         </section>
       )}

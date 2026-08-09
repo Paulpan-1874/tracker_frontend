@@ -40,35 +40,38 @@ function Console({ auth, onLogout }) {
   }, [auth.token, auth.user.id, onLogout])
 
   // 名下 IMEI 与 MQTT 实时数据合并: 无上报记录的设备显示为离线占位
+  // 广播期间追加 noResponse 标记: 本次广播后从未写过 location (时间戳早于广播) = 未响应 (可能没电)
+  const broadcastTime = broadcastActive ? broadcast.time || '' : ''
   const list = (ownedImeis || [])
     .map((imei) => devices[imei] || { imei, online: false, lastSeen: 0 })
     .sort((a, b) => {
       if (a.online !== b.online) return a.online ? -1 : 1
       return b.lastSeen - a.lastSeen
     })
+    .map((d) =>
+      broadcastActive
+        ? { ...d, noResponse: !d.location || (d.location.time || '') < broadcastTime }
+        : d
+    )
 
   const current = selected ? list.find((d) => d.imei === selected) : null
   const onlineCount = list.filter((d) => d.online).length
 
-  // 汇总名下所有设备的最近一次成功定位 (WGS-84 → GCJ-02), 供总览地图展示
-  // 新定位上报后 devices 更新 → 地图标记增量点亮
+  // 汇总名下所有设备的最后位置 (唯一来源: retained location, WGS-84 → GCJ-02)
   const gpsPoints = list
     .map((d) => {
-      const e = (d.events || [])
-        .slice()
-        .reverse()
-        .find((ev) => (ev.event === 'gps_result' || ev.event === 'location') && ev.lat != null && ev.lng != null)
-      if (!e) return null
+      const e = d.location
+      if (!e || e.lat == null || e.lng == null) return null
       const g = wgs84ToGcj02(e.lat, e.lng)
-      return { imei: e.imei || d.imei, lat: g.lat, lng: g.lng }
+      return { imei: d.imei, lat: g.lat, lng: g.lng }
     })
     .filter(Boolean)
 
-  // 一键定位开关: 点亮=下发 retained 广播; 再点=发空 retained 撤回
+  // 一键定位开关: 点亮=下发 retained 广播; 再点=撤回广播并清空名下所有设备的 retained 位置
   const toggleBroadcast = () => {
     if (broadcastActive) {
-      if (clearBroadcast(auth.user.id)) {
-        setBroadcastTip('广播已撤回，后续上线的设备不再执行')
+      if (clearBroadcast(auth.user.id, ownedImeis || [])) {
+        setBroadcastTip('广播已撤回，定位信息已清空')
       }
     } else if (sendBroadcast(auth.user.id, 'gps_start')) {
       setBroadcastTip(`广播已下发，${list.length} 台设备上线后将自动定位上报`)

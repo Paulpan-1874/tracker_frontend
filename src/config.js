@@ -14,6 +14,7 @@ export const DATA_TOPIC = 'device/+/data'
 export const STATUS_TOPIC = 'device/+/status'
 export const LOCATION_TOPIC = 'device/+/location'
 export const cmdTopic = (imei) => `device/${imei}/cmd`
+export const locationTopic = (imei) => `device/${imei}/location`
 export const broadcastTopic = (userId) => `user/${userId}/cmd_broadcast`
 
 // ====== 在线判定 ======
