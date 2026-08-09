@@ -136,7 +136,14 @@ function Console({ auth, onLogout }) {
               onClick={toggleBroadcast}
               disabled={status !== 'connected'}
             >
-              {broadcastActive ? '取消定位' : '开始定位'}
+              {broadcastActive ? (
+                <>
+                  等待设备上线，再次点击可取消
+                  <span className="btn-spinner" />
+                </>
+              ) : (
+                '开始定位'
+              )}
             </button>
             {/* 设备抽屉: 高度固定, 设备卡片一行四个, 可滑动 */}
             {drawerOpen && (
