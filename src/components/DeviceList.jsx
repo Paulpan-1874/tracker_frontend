@@ -75,9 +75,8 @@ export default function DeviceList({ devices, onSelect }) {
               {/* 右上: 电量在顶, 下面卫星天线图标 + 定位状态/用时两行 */}
               <div className="tile-right">
                 {vbat != null && (
-                  <span className="tile-vbat">
+                  <span className="tile-vbat" title={formatVbat(vbat)}>
                     <BatteryIcon mv={vbat} />
-                    {formatVbat(vbat)}
                   </span>
                 )}
                 <div className={`tile-loc tile-state-${loc.key}`}>
