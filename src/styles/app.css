@@ -352,6 +352,11 @@ html, body {
   cursor: pointer;
 }
 .map-layer-btn:active { opacity: 0.7; }
+/* 全屏地图: 切换按钮移到右下角 (右上角已被悬浮顶栏占据) */
+.app-full .map-layer-btn {
+  top: auto;
+  bottom: calc(10px + env(safe-area-inset-bottom));
+}
 .map-error {
   padding: 24px 12px;
   text-align: center;
