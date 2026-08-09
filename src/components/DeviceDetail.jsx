@@ -90,6 +90,7 @@ export default function DeviceDetail({ device, onBack, sendCommand }) {
           <MapView lat={gps.lat} lng={gps.lng} title={`设备 ${device.imei}`} />
           <Row k="坐标 (GCJ-02)" v={`${gps.lat.toFixed(6)}, ${gps.lng.toFixed(6)}`} />
           <Row k="卫星数" v={gps.sats} />
+          <Row k="定位用时" v={gps.duration != null ? `${gps.duration} 秒` : undefined} />
           <div className="map-link-row">
             <a
               className="map-link"
@@ -107,7 +108,8 @@ export default function DeviceDetail({ device, onBack, sendCommand }) {
         <section className="card">
           <h3>最近定位</h3>
           <div className="cmd-result fail">
-            最后一次定位失败（{loc.reason === 'timeout' ? '搜星超时' : loc.reason || '原因未知'}）· {loc.time || ''}
+            最后一次定位失败（{loc.reason === 'timeout' ? '搜星超时' : loc.reason || '原因未知'}
+            {loc.duration != null ? ` · 搜星 ${loc.duration} 秒` : ''}）· {loc.time || ''}
           </div>
         </section>
       )}

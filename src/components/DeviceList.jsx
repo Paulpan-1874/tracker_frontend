@@ -32,7 +32,9 @@ export default function DeviceList({ devices, onSelect }) {
                 {/* 定位状态槽位: 定位中 → 成功/失败 原地轮转, 状态刷新一目了然 */}
                 {d.locating && <span className="badge badge-locating">定位中…</span>}
                 {d.location && d.location.status === 'ok' && (
-                  <span className="badge badge-success">定位成功</span>
+                  <span className="badge badge-success">
+                    定位成功{d.location.duration != null ? ` · ${d.location.duration}秒` : ''}
+                  </span>
                 )}
                 {d.location && d.location.status === 'failed' && (
                   <span className="badge badge-failed">定位失败</span>
