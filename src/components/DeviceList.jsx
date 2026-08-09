@@ -70,23 +70,21 @@ export default function DeviceList({ devices, onSelect }) {
             title={tip}
           >
             <div className="tile-top">
-              {/* 左上: IMEI(自适应截断, 后期支持自定义设备名) */}
+              {/* 第一行: IMEI(自适应截断) + 电池图标 */}
               <span className="tile-imei">{d.imei}</span>
-              {/* 右上: 电量在顶, 下面卫星天线图标 + 定位状态/用时两行 */}
-              <div className="tile-right">
-                {vbat != null && (
-                  <span className="tile-vbat" title={formatVbat(vbat)}>
-                    <BatteryIcon mv={vbat} />
-                  </span>
-                )}
-                <div className={`tile-loc tile-state-${loc.key}`}>
-                  <span className="tile-loc-icon">📡</span>
-                  <span className="tile-loc-info">
-                    <span className="tile-state">{loc.text}</span>
-                    <span className="tile-dur">{loc.dur != null ? `${loc.dur}秒` : '—'}</span>
-                  </span>
-                </div>
-              </div>
+              {vbat != null && (
+                <span className="tile-vbat" title={formatVbat(vbat)}>
+                  <BatteryIcon mv={vbat} />
+                </span>
+              )}
+            </div>
+            {/* 第二行: 卫星天线图标 + 定位状态/用时 */}
+            <div className={`tile-loc tile-state-${loc.key}`}>
+              <span className="tile-loc-icon">📡</span>
+              <span className="tile-loc-info">
+                <span className="tile-state">{loc.text}</span>
+                <span className="tile-dur">{loc.dur != null ? `${loc.dur}秒` : '—'}</span>
+              </span>
             </div>
             {/* 底部: 最近上报 */}
             <div className="tile-foot">{formatLastSeen(d.lastSeen)}</div>

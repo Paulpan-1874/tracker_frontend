@@ -85,32 +85,33 @@ html, body {
 .device-tile {
   aspect-ratio: 1 / 1;
   background: var(--panel);
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 6px;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  padding: 8px;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  gap: 4px;
   transition: background 0.15s;
 }
 .device-tile:active { background: var(--panel-2); }
-/* 整个格子就是指示灯: 在线描绿边微光, 离线黯淡 */
+/* 整个格子就是指示灯: 在线描粗绿边+光晕, 离线黯淡 */
 .device-tile.tile-on {
-  border-color: rgba(52, 211, 153, 0.4);
-  box-shadow: 0 0 8px rgba(52, 211, 153, 0.12);
+  border-color: rgba(52, 211, 153, 0.8);
+  box-shadow: 0 0 12px rgba(52, 211, 153, 0.35), inset 0 0 8px rgba(52, 211, 153, 0.08);
 }
 .device-tile.tile-off {
   opacity: 0.6;
-  border-color: rgba(148, 163, 184, 0.12);
+  border-color: rgba(148, 163, 184, 0.18);
 }
 
-/* 上半区: 左IMEI 右(电量+定位信息) */
+/* 第一行: 左IMEI 右电池图标 */
 .tile-top {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 4px;
+  gap: 6px;
 }
 /* IMEI 自适应截断 (后期支持自定义设备名) */
 .tile-imei {
@@ -123,38 +124,22 @@ html, body {
   flex: 1;
   min-width: 0;
 }
-/* 右上列: 电量在顶, 定位信息在下 */
-.tile-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-  flex-shrink: 0;
-}
-.tile-vbat {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 9px;
-  color: var(--text-dim);
-  line-height: 1.2;
-}
 /* 电池图标描边跟随文字色, 格色由组件内联控制 */
 .batt { color: var(--text-dim); flex-shrink: 0; }
-/* 定位信息: 卫星图标 + 状态/用时两行 */
+/* 第二行: 定位信息 (卫星图标 + 状态/用时两行) */
 .tile-loc {
   display: flex;
-  align-items: flex-start;
-  gap: 3px;
-  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
 }
-.tile-loc-icon { font-size: 9px; line-height: 1.4; }
+.tile-loc-icon { font-size: 12px; line-height: 1.2; }
 .tile-loc-info {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
-.tile-state { font-size: 9px; line-height: 1.2; }
-.tile-dur { font-size: 8px; color: var(--text-dim); line-height: 1.2; }
+.tile-state { font-size: 10px; line-height: 1.25; }
+.tile-dur { font-size: 9px; color: var(--text-dim); line-height: 1.25; }
 /* 定位状态色 */
 .tile-state-locating .tile-state {
   color: #fbbf24;
@@ -165,7 +150,7 @@ html, body {
 .tile-state-noresp .tile-state { color: #94a3b8; }
 .tile-state-none .tile-state { color: var(--text-dim); }
 
-/* 底部: 最近上报 */
+/* 第三行: 最近上报 */
 .tile-foot {
   font-size: 9px;
   color: var(--text-dim);
