@@ -26,7 +26,10 @@ export default function MapView({ lat, lng, title = '设备位置', zoom = 16 })
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const markerRef = useRef(null)
+  const satelliteRef = useRef(false) // 图层模式 (ref 供地图初始化读取, state 驱动按钮文案)
   const [loadError, setLoadError] = useState(false)
+  const [satellite, setSatellite] = useState(false)
+  const [layerEpoch, setLayerEpoch] = useState(0) // 图层切换时递增, 触发地图重建
 
   useEffect(() => {
     let cancelled = false
@@ -37,7 +40,11 @@ export default function MapView({ lat, lng, title = '设备位置', zoom = 16 })
           mapRef.current = new AMap.Map(containerRef.current, {
             zoom,
             center: [lng, lat],
-            resizeEnable: true
+            resizeEnable: true,
+            // 初始化时直接指定图层组合: 卫星模式下叠加路网保证路名可见
+            layers: satelliteRef.current
+              ? [new AMap.TileLayer.Satellite(), new AMap.TileLayer.RoadNet()]
+              : [new AMap.TileLayer()]
           })
           markerRef.current = new AMap.Marker({
             map: mapRef.current,
@@ -55,7 +62,19 @@ export default function MapView({ lat, lng, title = '设备位置', zoom = 16 })
     return () => {
       cancelled = true
     }
-  }, [lat, lng, zoom, title])
+  }, [lat, lng, zoom, title, layerEpoch])
+
+  // 卫星图/普通图切换: 销毁重建地图实例, 用初始化 layers 参数选择图层组合
+  // (AMap v1.4 的 addLayer 动态叠加存在兼容坑, 重建最稳)
+  const toggleSatellite = () => {
+    if (!mapRef.current) return
+    mapRef.current.destroy()
+    mapRef.current = null
+    markerRef.current = null
+    satelliteRef.current = !satellite
+    setSatellite(!satellite)
+    setLayerEpoch((e) => e + 1)
+  }
 
   // 组件卸载时销毁地图实例, 释放内存
   useEffect(() => {
@@ -71,5 +90,12 @@ export default function MapView({ lat, lng, title = '设备位置', zoom = 16 })
   if (loadError) {
     return <div className="map-error">地图加载失败，请检查网络或 key 配置</div>
   }
-  return <div ref={containerRef} className="map-view" />
+  return (
+    <div className="map-wrap">
+      <div ref={containerRef} className="map-view" />
+      <button className="map-layer-btn" onClick={toggleSatellite}>
+        {satellite ? '普通图' : '卫星图'}
+      </button>
+    </div>
+  )
 }

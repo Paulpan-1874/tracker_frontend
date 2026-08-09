@@ -251,6 +251,9 @@ html, body {
 .ev-time { color: var(--text-dim); font-size: 12px; }
 
 /* ===== 高德地图 ===== */
+.map-wrap {
+  position: relative;
+}
 .map-view {
   width: 100%;
   height: 260px;
@@ -259,6 +262,21 @@ html, body {
   margin-bottom: 10px;
   background: var(--panel-2);
 }
+/* 卫星图/普通图切换按钮: 悬浮在地图右上角 (z-index 需高于高德内部 DOM) */
+.map-layer-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 200;
+  padding: 5px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.75);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+.map-layer-btn:active { opacity: 0.7; }
 .map-error {
   padding: 24px 12px;
   text-align: center;
