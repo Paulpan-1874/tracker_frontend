@@ -509,6 +509,56 @@ html, body {
   .app { padding-top: 8px; }
 }
 
+/* 顶栏内容行 (与灯阵拼合时作为第一行) */
+.topbar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+/* 收起态拼合灯阵时: 顶栏改为纵向两行 */
+.topbar-merged {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+/* 定位状态灯阵: 一行30个, 共3行坑位; 与顶栏同宽, 灯位均分自适应 */
+.panel-lamps {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(30, 1fr);
+  justify-items: center;
+  gap: 3px 0;
+}
+.panel-lamp {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  background: rgba(148, 163, 184, 0.25); /* 未定位: 不亮灯 */
+}
+.panel-lamp.lamp-on {
+  background: var(--green);
+  box-shadow: 0 0 4px rgba(52, 211, 153, 0.8);
+}
+/* 定位中: 黄灯呼吸 (覆盖 lamp-on 的绿色) */
+.panel-lamp.lamp-breathe {
+  background: #fbbf24;
+  box-shadow: 0 0 4px rgba(251, 191, 36, 0.8);
+  animation: locating-pulse 1.2s ease-in-out infinite;
+}
+/* 空坑位: 透明底 + 保留灯框 */
+.panel-lamp.slot {
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  cursor: default;
+}
+.panel-lamp:active { opacity: 0.7; }
+/* 收起态灯阵下方的满宽常用操作按钮 */
+.broadcast-btn.full { width: 100%; }
+
 /* ===== 全屏地图布局: 地图打底, 顶栏悬浮, 操作面板为左侧抽屉 ===== */
 .app-full {
   position: relative;

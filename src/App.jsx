@@ -83,29 +83,65 @@ function Console({ auth, onLogout }) {
         <FleetMap points={gpsPoints} />
       </div>
 
-      {/* 左上角浮动栏: 标题 + 连接状态 + 面板开关 */}
-      <header className="topbar">
-        <button className="panel-toggle" onClick={() => setPanelOpen(!panelOpen)}>
-          {panelOpen ? '✕' : '☰'}
-        </button>
-        <div className="topbar-title">
-          <h1>设备控制台</h1>
-          <p className="sub">
-            {auth.user.name} · {onlineCount} 台在线 · 共 {list.length} 台
-          </p>
+      {/* 浮动顶栏: 标题 + 连接状态 + 面板开关; 收起时拼入定位状态灯阵 (3行×30列) 与操作按钮 */}
+      <header className={`topbar ${!panelOpen ? 'topbar-merged' : ''}`}>
+        <div className="topbar-row">
+          <button className="panel-toggle" onClick={() => setPanelOpen(!panelOpen)}>
+            {panelOpen ? '✕' : '☰'}
+          </button>
+          <div className="topbar-title">
+            <h1>设备控制台</h1>
+            <p className="sub">
+              {auth.user.name} · {onlineCount} 台在线 · 共 {list.length} 台
+            </p>
+          </div>
+          <span className={`conn conn-${status}`}>
+            {status === 'connected' ? '已连接' : status === 'connecting' ? '连接中…' : '连接失败'}
+          </span>
+          <button
+            className="logout-btn"
+            onClick={() => {
+              logout()
+              onLogout()
+            }}
+          >
+            退出
+          </button>
         </div>
-        <span className={`conn conn-${status}`}>
-          {status === 'connected' ? '已连接' : status === 'connecting' ? '连接中…' : '连接失败'}
-        </span>
-        <button
-          className="logout-btn"
-          onClick={() => {
-            logout()
-            onLogout()
-          }}
-        >
-          退出
-        </button>
+        {/* 收起时: 灯阵概览设备定位状态 (未定位不亮, 定位中黄灯呼吸, 定位成功绿灯常亮) */}
+        {!panelOpen && (
+          <>
+            <div className="panel-lamps">
+              {/* 固定 90 个坑位 (3行×30列): 设备占前 N 格, 多余坑位保留灯框 */}
+              {Array.from({ length: Math.max(list.length, 90) }).map((_, i) => {
+                const d = list[i]
+                if (!d) return <span key={`slot-${i}`} className="panel-lamp slot" />
+                const locStatus = d.location && d.location.status
+                const cls = locStatus === 'ok' ? 'lamp-on' : locStatus === 'locating' ? 'lamp-on lamp-breathe' : ''
+                const text = locStatus === 'ok' ? '定位成功' : locStatus === 'locating' ? '定位中' : '未定位'
+                return (
+                  <button
+                    key={d.imei}
+                    className={`panel-lamp ${cls}`}
+                    title={`${d.imei} · ${text}`}
+                    onClick={() => {
+                      setSelected(d.imei)
+                      setPanelOpen(true)
+                    }}
+                  />
+                )
+              })}
+            </div>
+            {/* 灯阵下方: 满宽常用操作按钮 */}
+            <button
+              className={`broadcast-btn full ${broadcastActive ? 'lit' : ''}`}
+              onClick={toggleBroadcast}
+              disabled={status !== 'connected'}
+            >
+              {broadcastActive ? '取消定位' : '开始定位'}
+            </button>
+          </>
+        )}
       </header>
 
       {panelOpen && (
