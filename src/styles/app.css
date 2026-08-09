@@ -378,6 +378,12 @@ html, body {
 }
 .broadcast-btn:disabled { opacity: 0.5; }
 .broadcast-btn:active { opacity: 0.8; }
+/* 点亮态: Broker 上存在生效的 retained 广播 */
+.broadcast-btn.lit {
+  background: var(--red);
+  color: #fff;
+  box-shadow: 0 0 12px rgba(248, 113, 113, 0.5);
+}
 .broadcast-tip {
   font-size: 12px;
   color: var(--text-dim);

@@ -3,10 +3,13 @@ import mqtt from 'mqtt'
 import { MQTT_URL, DATA_TOPIC, STATUS_TOPIC, cmdTopic, broadcastTopic, ONLINE_TIMEOUT_MS } from '../config'
 
 // 连接状态: connecting | connected | error
-export function useMqtt() {
+// userId: 登录用户 id, 传入后自动订阅其广播主题并同步 retained 广播实况
+export function useMqtt(userId) {
   const clientRef = useRef(null)
   const [status, setStatus] = useState('connecting')
   const [devices, setDevices] = useState({})
+  // 当前生效的广播指令 (来自 Broker retained, 非本地记忆, 不会假广播)
+  const [broadcast, setBroadcast] = useState(null)
 
   // 建立 MQTT 连接并订阅上报主题
   useEffect(() => {
@@ -20,7 +23,9 @@ export function useMqtt() {
 
     client.on('connect', () => {
       setStatus('connected')
-      client.subscribe([DATA_TOPIC, STATUS_TOPIC], { qos: 0 })
+      const topics = [DATA_TOPIC, STATUS_TOPIC]
+      if (userId) topics.push(broadcastTopic(userId))
+      client.subscribe(topics, { qos: 0 })
     })
     client.on('reconnect', () => setStatus('connecting'))
     client.on('error', () => setStatus('error'))
@@ -28,8 +33,23 @@ export function useMqtt() {
       setStatus((s) => (s === 'connected' ? 'connecting' : s))
     })
 
-    // 收到设备消息: device/{imei}/data 或 device/{imei}/status
     client.on('message', (topic, payload) => {
+      // 广播主题: retained 消息订阅后立即送达, 以此同步按钮真实状态
+      if (userId && topic === broadcastTopic(userId)) {
+        const text = payload.toString()
+        if (!text) {
+          setBroadcast(null)   // 空 retained = 广播已撤回
+          return
+        }
+        try {
+          setBroadcast(JSON.parse(text))
+        } catch (e) {
+          setBroadcast(null)
+        }
+        return
+      }
+
+      // 收到设备消息: device/{imei}/data 或 device/{imei}/status
       const parts = topic.split('/')
       if (parts.length !== 3 || parts[0] !== 'device') return
       const imei = parts[1]
@@ -80,7 +100,7 @@ export function useMqtt() {
       client.end(true)
       clientRef.current = null
     }
-  }, [])
+  }, [userId])
 
   // 兜底: 对没有 retained status 的设备, 用上报超时判定离线
   useEffect(() => {
@@ -154,5 +174,5 @@ export function useMqtt() {
     return true
   }, [])
 
-  return { status, devices, sendCommand, sendBroadcast, clearBroadcast }
+  return { status, devices, sendCommand, sendBroadcast, clearBroadcast, broadcast }
 }

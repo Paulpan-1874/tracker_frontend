@@ -7,11 +7,14 @@ import { getAuth, logout, fetchMyDevices } from './api'
 
 // 登录后的控制台: 只显示当前用户名下的设备
 function Console({ auth, onLogout }) {
-  const { status, devices, sendCommand, sendBroadcast, clearBroadcast } = useMqtt()
+  const { status, devices, sendCommand, sendBroadcast, clearBroadcast, broadcast } = useMqtt(auth.user.id)
   const [selected, setSelected] = useState(null)
   const [ownedImeis, setOwnedImeis] = useState(null) // null=加载中, []=无设备
   const [loadError, setLoadError] = useState('')
   const [broadcastTip, setBroadcastTip] = useState('')
+
+  // 广播按钮状态 = Broker retained 实况 (broadcast 由订阅同步), 不存在假广播
+  const broadcastActive = !!(broadcast && broadcast.action)
 
   // 按用户 id 拉取名下设备
   useEffect(() => {
@@ -45,18 +48,16 @@ function Console({ auth, onLogout }) {
   const current = selected ? list.find((d) => d.imei === selected) : null
   const onlineCount = list.filter((d) => d.online).length
 
-  // 一键定位: 广播 gps_start (retained), 设备上线即执行, 逐台回传定位
-  const doBroadcastGps = () => {
-    if (sendBroadcast(auth.user.id, 'gps_start')) {
+  // 一键定位开关: 点亮=下发 retained 广播; 再点=发空 retained 撤回
+  const toggleBroadcast = () => {
+    if (broadcastActive) {
+      if (clearBroadcast(auth.user.id)) {
+        setBroadcastTip('广播已撤回，后续上线的设备不再执行')
+      }
+    } else if (sendBroadcast(auth.user.id, 'gps_start')) {
       setBroadcastTip(`广播已下发，${list.length} 台设备上线后将自动定位上报`)
     } else {
       setBroadcastTip('下发失败，请确认已连接 Broker')
-    }
-  }
-
-  const doClearBroadcast = () => {
-    if (clearBroadcast(auth.user.id)) {
-      setBroadcastTip('广播已撤回，后续上线的设备不再执行')
     }
   }
 
@@ -89,11 +90,12 @@ function Console({ auth, onLogout }) {
 
       {!current && (
         <div className="broadcast-bar">
-          <button className="broadcast-btn" onClick={doBroadcastGps} disabled={status !== 'connected'}>
-            📍 一键定位所有设备
-          </button>
-          <button className="broadcast-btn ghost" onClick={doClearBroadcast} disabled={status !== 'connected'}>
-            撤回广播
+          <button
+            className={`broadcast-btn ${broadcastActive ? 'lit' : ''}`}
+            onClick={toggleBroadcast}
+            disabled={status !== 'connected'}
+          >
+            {broadcastActive ? '● 定位广播已开启，点击撤回' : '📍 一键定位所有设备'}
           </button>
           {broadcastTip && <span className="broadcast-tip">{broadcastTip}</span>}
         </div>
