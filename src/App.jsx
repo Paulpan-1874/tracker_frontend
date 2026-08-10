@@ -92,7 +92,7 @@ function Console({ auth, onLogout }) {
           <div className="topbar-title">
             <h1>设备控制台</h1>
             <p className="sub">
-              {auth.user.name} · {onlineCount} 台在线 · 共 {list.length} 台
+              {auth.user.name} · 共 {list.length} 台，在线 {onlineCount} 台
             </p>
           </div>
           <span className={`conn conn-${status}`}>
