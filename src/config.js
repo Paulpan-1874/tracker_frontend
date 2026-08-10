@@ -18,9 +18,7 @@ export const locationTopic = (imei) => `device/${imei}/location`
 export const broadcastTopic = (userId) => `user/${userId}/cmd_broadcast`
 
 // ====== 在线判定 ======
-// 主要依据 device/+/status 的 retained 消息 (online/offline)。
-// 对仅有 data 上报、没有 status 的设备, 超过该时长无上报则判定离线 (兜底)
-export const ONLINE_TIMEOUT_MS = 120 * 1000
+// 唯一依据 device/+/status 的 retained 消息 (online/offline, 含 LWT 遗嘱)
 
 // ====== 高德地图 ======
 // Web端(JS API) key; 设备上报为 WGS-84 坐标, 高德使用 GCJ-02, 前端本地纠偏

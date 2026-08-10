@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import mqtt from 'mqtt'
-import { MQTT_URL, DATA_TOPIC, STATUS_TOPIC, LOCATION_TOPIC, cmdTopic, locationTopic, broadcastTopic, ONLINE_TIMEOUT_MS } from '../config'
+import { MQTT_URL, DATA_TOPIC, STATUS_TOPIC, LOCATION_TOPIC, cmdTopic, locationTopic, broadcastTopic } from '../config'
 
 // 连接状态: connecting | connected | error
 // userId: 登录用户 id, 传入后自动订阅其广播主题并同步 retained 广播实况
@@ -99,10 +99,7 @@ export function useMqtt(userId) {
               ...old,
               imei,
               location: data,
-              locating: data.status === 'locating',
-              // 有 status 的设备不从这里刷新时间 (单一数据源); 无 status 的设备才用它兑底
-              lastSeen: old.hasStatus ? old.lastSeen : now,
-              online: old.hasStatus ? old.online : true
+              locating: data.status === 'locating'
             }
           }
         }
@@ -114,9 +111,6 @@ export function useMqtt(userId) {
             ...old,
             imei,
             telemetry: data,
-            // 同 location 分支: 有 status 的设备时间只认离线事件
-            lastSeen: old.hasStatus ? old.lastSeen : now,
-            online: old.hasStatus ? old.online : true,
             events: [...(old.events || []), data].slice(-30)
           }
         }
@@ -128,30 +122,6 @@ export function useMqtt(userId) {
       clientRef.current = null
     }
   }, [userId])
-
-  // 兜底: 对没有 retained status 的设备, 用上报超时判定离线
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const now = Date.now()
-      setDevices((prev) => {
-        let changed = false
-        const next = {}
-        for (const key of Object.keys(prev)) {
-          const d = prev[key]
-          // 有 retained status 的设备信任 status (LWT 会翻转), 不用超时覆盖
-          if (d.hasStatus) {
-            next[key] = d
-            continue
-          }
-          const online = now - d.lastSeen < ONLINE_TIMEOUT_MS
-          if (online !== d.online) changed = true
-          next[key] = { ...d, online }
-        }
-        return changed ? next : prev
-      })
-    }, 5000)
-    return () => clearInterval(timer)
-  }, [])
 
   // 下发指令到 device/{imei}/cmd
   const sendCommand = useCallback((imei, action) => {
