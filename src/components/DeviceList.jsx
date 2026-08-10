@@ -65,8 +65,16 @@ export default function DeviceList({ devices, onSelect }) {
       {devices.map((d) => {
         const loc = locInfo(d)
         const t = d.telemetry || {}
-        // 电压优先取实时遥测; 设备休眠/页面刷新后无遥测时, 回退用 retained 位置里携带的 vbat
-        const vbat = t.vbat != null ? t.vbat : d.location && d.location.vbat != null ? d.location.vbat : null
+        // 电压三级回退: 实时遥测 (非 retained, 页面刷新即失) → retained 位置携带的 vbat
+        // → retained 在线/离线状态携带的 vbat (常驻 Broker, 刷新后保底可见)
+        const vbat =
+          t.vbat != null
+            ? t.vbat
+            : d.location && d.location.vbat != null
+              ? d.location.vbat
+              : d.status && d.status.vbat != null
+                ? d.status.vbat
+                : null
         const tip = [
           d.imei,
           d.online ? '在线' : '离线',
