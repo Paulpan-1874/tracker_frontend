@@ -111,15 +111,23 @@ function Console({ auth, onLogout }) {
         {/* 详情打开时控制面板收回单行; 灯阵/按钮/抽屉仅在总览态显示 */}
         {!current && (
           <>
-            {/* 灯阵概览设备定位状态 (未定位不亮, 定位中黄灯呼吸, 定位成功绿灯常亮) */}
+            {/* 灯阵概览设备定位状态 (未定位不亮, 定位中黄灯呼吸, 成功绿灯常亮, 失败红灯常亮) */}
             <div className="panel-lamps">
               {/* 固定 90 个坑位 (3行×30列): 设备占前 N 格, 多余坑位保留灯框 */}
               {Array.from({ length: Math.max(list.length, 90) }).map((_, i) => {
                 const d = list[i]
                 if (!d) return <span key={`slot-${i}`} className="panel-lamp slot" />
                 const locStatus = d.location && d.location.status
-                const cls = locStatus === 'ok' ? 'lamp-on' : locStatus === 'locating' ? 'lamp-on lamp-breathe' : ''
-                const text = locStatus === 'ok' ? '定位成功' : locStatus === 'locating' ? '定位中' : '未定位'
+                const cls =
+                  locStatus === 'ok'
+                    ? 'lamp-on'
+                    : locStatus === 'locating'
+                      ? 'lamp-on lamp-breathe'
+                      : locStatus === 'failed'
+                        ? 'lamp-on lamp-fail'
+                        : ''
+                const text =
+                  locStatus === 'ok' ? '定位成功' : locStatus === 'locating' ? '定位中' : locStatus === 'failed' ? '定位失败' : '未定位'
                 return (
                   <button
                     key={d.imei}

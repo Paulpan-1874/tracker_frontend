@@ -551,6 +551,11 @@ html, body {
   box-shadow: 0 0 4px rgba(251, 191, 36, 0.8);
   animation: locating-pulse 1.2s ease-in-out infinite;
 }
+/* 定位失败: 红灯常亮 (覆盖 lamp-on 的绿色) */
+.panel-lamp.lamp-fail {
+  background: var(--red);
+  box-shadow: 0 0 4px rgba(248, 113, 113, 0.8);
+}
 /* 空坑位: 透明底 + 保留灯框 */
 .panel-lamp.slot {
   background: transparent;
