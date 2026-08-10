@@ -61,7 +61,10 @@ export function useMqtt(userId) {
       } catch (e) {
         data = { raw: payload.toString() }
       }
-      const now = Date.now()
+      // 最后上报时间取消息自带的 time (设备发布时间), 刷新页面收到 retained 重发时不会误判为"刚刚";
+      // 解析失败才回退本地时间
+      const parsedTime = data.time ? Date.parse(data.time) : NaN
+      const now = isNaN(parsedTime) ? Date.now() : parsedTime
 
       setDevices((prev) => {
         const old = prev[imei] || { imei, events: [] }
