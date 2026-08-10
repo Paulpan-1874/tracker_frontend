@@ -12,6 +12,7 @@ function Console({ auth, onLogout }) {
   const { status, devices, sendCommand, sendBroadcast, clearBroadcast, broadcast } = useMqtt(auth.user.id)
   const [selected, setSelected] = useState(null)
   const [drawerOpen, setDrawerOpen] = useState(false) // 面板底部抓手展开的设备抽屉
+  const [satellite, setSatellite] = useState(false) // 总览地图图层模式 (按钮在顶部面板内)
   const swipeY = useRef(null) // 抽屉手势: 记录起始触点, 下滑展开/上滑收起
   const justSwiped = useRef(false) // 手势触发后吞掉随后的 click, 避免抽屉被立刻弹回
   const [ownedImeis, setOwnedImeis] = useState(null) // null=加载中, []=无设备
@@ -82,7 +83,7 @@ function Console({ auth, onLogout }) {
     // 全屏布局: 地图铺满整个视口, 操作面板/详情页作为左侧悬浮抽屉
     <div className="app app-full">
       <div className="map-area">
-        <FleetMap points={gpsPoints} />
+        <FleetMap points={gpsPoints} satellite={satellite} />
       </div>
 
       {/* 浮动控制面板: 菜单行 + 定位状态灯阵 (3行×30列) + 底部抽屏抓手 */}
@@ -192,6 +193,10 @@ function Console({ auth, onLogout }) {
             </button>
           </>
         )}
+        {/* 图层切换: 脱离面板卡片, 悬浮在面板正下方靠右 (DOM 在 header 内, 高度变化时自动跟随) */}
+        <button className="map-layer-btn" onClick={() => setSatellite(!satellite)}>
+          {satellite ? '普通图' : '卫星图'}
+        </button>
       </header>
 
       {/* 页面底部悬浮操作栏: 一键定位按钮 (独立于顶部面板, 随时可触达) */}

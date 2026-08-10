@@ -26,13 +26,13 @@ const DEFAULT_CENTER = [112.4483, 23.066]
 
 // 多设备总览地图: points = [{ imei, lat, lng }] (经纬度须已纠偏为 GCJ-02)
 // 空数组时展示默认地图; 新定位到达时增量点亮对应标记并自动框选视野
-export default function FleetMap({ points }) {
+// satellite 由外部 (App) 控制, 切换按钮已移到顶部面板内
+export default function FleetMap({ points, satellite }) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const markersRef = useRef({}) // imei -> AMap.Marker
-  const satelliteRef = useRef(false) // 图层模式 (ref 供地图初始化读取, state 驱动按钮文案)
+  const satelliteRef = useRef(satellite) // 图层模式 (ref 供地图初始化读取)
   const [loadError, setLoadError] = useState(false)
-  const [satellite, setSatellite] = useState(false)
   const [layerEpoch, setLayerEpoch] = useState(0) // 图层切换时递增, 触发地图重建
 
   useEffect(() => {
@@ -92,15 +92,15 @@ export default function FleetMap({ points }) {
 
   // 卫星图/普通图切换: 销毁重建地图实例, 用初始化 layers 参数选择图层组合
   // (AMap v1.4 的 addLayer 动态叠加存在兼容坑, 重建最稳; 标记会随 points effect 自动重建)
-  const toggleSatellite = () => {
-    if (!mapRef.current) return
-    mapRef.current.destroy()
-    mapRef.current = null
-    markersRef.current = {}
-    satelliteRef.current = !satellite
-    setSatellite(!satellite)
-    setLayerEpoch((e) => e + 1)
-  }
+  useEffect(() => {
+    satelliteRef.current = satellite
+    if (mapRef.current) {
+      mapRef.current.destroy()
+      mapRef.current = null
+      markersRef.current = {}
+      setLayerEpoch((e) => e + 1)
+    }
+  }, [satellite])
 
   // 组件卸载时销毁地图实例
   useEffect(() => {
@@ -119,9 +119,6 @@ export default function FleetMap({ points }) {
   return (
     <div className="map-wrap">
       <div ref={containerRef} className="map-view" />
-      <button className="map-layer-btn" onClick={toggleSatellite}>
-        {satellite ? '普通图' : '卫星图'}
-      </button>
     </div>
   )
 }
