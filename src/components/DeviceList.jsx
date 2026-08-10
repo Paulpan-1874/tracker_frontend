@@ -41,14 +41,17 @@ function locInfo(d) {
 }
 
 export default function DeviceList({ devices, onSelect }) {
-  // 有设备在搜星时每秒刷新一次, 驱动定位中计时跳动
+  // 需要定时重渲染的两种场景: 搜星中要实时计时; 离线设备的"x秒前"要自己走动
   const anyLocating = devices.some((d) => d.locating)
+  const anyOffline = devices.some((d) => !d.online && d.lastSeen)
+  // 秒级显示时每秒刷一次; 只剩分钟/小时粒度时 60 秒刷一次, 避免无谓重渲染
+  const secondGranularity = anyLocating || devices.some((d) => !d.online && d.lastSeen && Date.now() - d.lastSeen < 60000)
   const [, setTick] = useState(0)
   useEffect(() => {
-    if (!anyLocating) return
-    const timer = setInterval(() => setTick((t) => t + 1), 1000)
+    if (!anyLocating && !anyOffline) return
+    const timer = setInterval(() => setTick((t) => t + 1), secondGranularity ? 1000 : 60000)
     return () => clearInterval(timer)
-  }, [anyLocating])
+  }, [anyLocating, anyOffline, secondGranularity])
 
   if (!devices.length) {
     return (
