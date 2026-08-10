@@ -178,8 +178,8 @@ html, body {
   flex-shrink: 0;
 }
 .tile-lamp.lamp-on {
-  background: var(--green);
-  box-shadow: 0 0 5px rgba(52, 211, 153, 0.8);
+  background: #38bdf8;
+  box-shadow: 0 0 5px rgba(56, 189, 248, 0.8);
 }
 .tile-lamp.lamp-off { background: rgba(148, 163, 184, 0.4); }
 .tile-net { flex-shrink: 0; }
@@ -544,6 +544,11 @@ html, body {
 .panel-lamp.lamp-on {
   background: var(--green);
   box-shadow: 0 0 4px rgba(52, 211, 153, 0.8);
+}
+/* 在线未定位: 蓝灯常亮 (覆盖默认的灰色暗灯) */
+.panel-lamp.lamp-online {
+  background: #38bdf8;
+  box-shadow: 0 0 4px rgba(56, 189, 248, 0.8);
 }
 /* 定位中: 黄灯呼吸 (覆盖 lamp-on 的绿色) */
 .panel-lamp.lamp-breathe {
