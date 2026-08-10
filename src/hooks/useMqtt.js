@@ -70,7 +70,10 @@ export function useMqtt(userId) {
         const old = prev[imei] || { imei, events: [] }
 
         // 在线状态 (retained): 权威判定 online/offline
+        // 单一数据源: 最后在线时间只在"确认离线"时写入 (取离线消息自带的 time);
+        // 上线及后续上报都不覆盖, 避免 retained 重发把时间重置成"刚刚"
         if (kind === 'status') {
+          const offline = data.event === 'offline'
           return {
             ...prev,
             [imei]: {
@@ -78,8 +81,8 @@ export function useMqtt(userId) {
               imei,
               status: data,
               hasStatus: true,
-              online: data.event !== 'offline',
-              lastSeen: now
+              online: !offline,
+              lastSeen: offline ? now : old.lastSeen
             }
           }
         }
@@ -97,7 +100,8 @@ export function useMqtt(userId) {
               imei,
               location: data,
               locating: data.status === 'locating',
-              lastSeen: now,
+              // 有 status 的设备不从这里刷新时间 (单一数据源); 无 status 的设备才用它兑底
+              lastSeen: old.hasStatus ? old.lastSeen : now,
               online: old.hasStatus ? old.online : true
             }
           }
@@ -110,7 +114,8 @@ export function useMqtt(userId) {
             ...old,
             imei,
             telemetry: data,
-            lastSeen: now,
+            // 同 location 分支: 有 status 的设备时间只认离线事件
+            lastSeen: old.hasStatus ? old.lastSeen : now,
             online: old.hasStatus ? old.online : true,
             events: [...(old.events || []), data].slice(-30)
           }
