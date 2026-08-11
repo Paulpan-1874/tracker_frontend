@@ -31,6 +31,10 @@ export default function DeviceDetail({ device, onBack, sendCommand }) {
   const gpsFailed = locSt === 'failed'
   const gpsRaw = !gpsFailed && loc && loc.lat != null ? loc : null
   const gps = gpsRaw ? { ...gpsRaw, ...wgs84ToGcj02(gpsRaw.lat, gpsRaw.lng) } : null
+  // 搜星轮次 (固件随定位消息上报 attempt/attempts_total, 旧固件无字段时不展示)
+  const rounds = loc && loc.attempt != null && loc.attempts_total != null
+    ? `${loc.attempt}/${loc.attempts_total}`
+    : null
 
   const handleSend = (action) => {
     const ok = sendCommand(device.imei, action)
@@ -47,7 +51,7 @@ export default function DeviceDetail({ device, onBack, sendCommand }) {
 
       <div className="detail-head">
         <h2>{device.imei}</h2>
-        {locSt === 'locating' && <span className="badge badge-locating">定位中…</span>}
+        {locSt === 'locating' && <span className="badge badge-locating">定位中…{rounds ? rounds : ''}</span>}
         <span className={`badge ${device.online ? 'badge-online' : 'badge-offline'}`}>
           {device.online ? '在线' : '离线'}
         </span>
@@ -101,6 +105,7 @@ export default function DeviceDetail({ device, onBack, sendCommand }) {
           <Row k="坐标 (GCJ-02)" v={`${gps.lat.toFixed(6)}, ${gps.lng.toFixed(6)}`} />
           <Row k="卫星数" v={gps.sats} />
           <Row k="定位用时" v={gps.duration != null ? `${gps.duration} 秒` : undefined} />
+          <Row k="搜星轮次" v={rounds} />
           <div className="map-link-row">
             <a
               className="map-link"
@@ -119,6 +124,7 @@ export default function DeviceDetail({ device, onBack, sendCommand }) {
           <h3>最近定位</h3>
           <div className="cmd-result fail">
             最后一次定位失败（{loc.reason === 'timeout' ? '搜星超时' : loc.reason || '原因未知'}
+            {rounds ? ` · 第 ${rounds} 轮` : ''}
             {loc.duration != null ? ` · 搜星 ${loc.duration} 秒` : ''}）· {loc.time || ''}
           </div>
         </section>

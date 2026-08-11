@@ -26,6 +26,12 @@ function BatteryIcon({ pct }) {
   )
 }
 
+// 搜星轮次: 固件随定位消息上报 attempt/attempts_total (广播重试时 >1 轮);
+// 旧固件无字段返回 null, 展示自动退回无轮次文案
+function roundsOf(s) {
+  return s && s.attempt != null && s.attempts_total != null ? `${s.attempt}/${s.attempts_total}` : null
+}
+
 // 定位信息: 状态 + 用时; 状态统一走 locStatusOf (纯消息驱动, 前端不做时间推断)
 function locInfo(d) {
   const st = locStatusOf(d)
@@ -33,18 +39,21 @@ function locInfo(d) {
     // 计时优先用搜星心跳携带的 elapsed (设备侧时长, 无时钟偏移, 刷新页面不归零),
     // 加上心跳到达后本地流逝的秒数; 尚无心跳 (刚打开页面/旧固件) 时从 locating 到达时间起计
     const t = d.telemetry || {}
+    // 轮次: 心跳 (最新一轮) 优先, 无心跳时取 retained locating
+    const r = roundsOf(t.event === 'gps_searching' ? t : null) || roundsOf(d.location)
     if (t.event === 'gps_searching' && t.elapsed != null && d.lastMsgAt) {
       const dur = t.elapsed + Math.max(0, Math.floor((Date.now() - d.lastMsgAt) / 1000))
-      return { key: 'locating', text: '定位中…', dur }
+      return { key: 'locating', text: r ? `定位中…${r}` : '定位中…', dur }
     }
     const recv = d.location && d.location.receivedAt
     const dur = recv ? Math.max(0, Math.floor((Date.now() - recv) / 1000)) : null
-    return { key: 'locating', text: '定位中…', dur }
+    return { key: 'locating', text: r ? `定位中…${r}` : '定位中…', dur }
   }
   // 广播去重跳过 (broadcast_skipped) 不单独展示: 用户只关注定位结果,
   // 跳过意味着同一 cmd_id 已执行过, retained 里就是本次广播的真实结果, 维持原灯色即可
-  if (st === 'ok') return { key: 'ok', text: '定位成功', dur: d.location.duration }
-  if (st === 'failed') return { key: 'failed', text: '定位失败', dur: d.location && d.location.duration }
+  const r = roundsOf(d.location)
+  if (st === 'ok') return { key: 'ok', text: r ? `定位成功:${r}` : '定位成功', dur: d.location.duration }
+  if (st === 'failed') return { key: 'failed', text: r ? `定位失败:${r}` : '定位失败', dur: d.location && d.location.duration }
   if (d.noResponse) return { key: 'noresp', text: '未响应', dur: null }
   return { key: 'none', text: '未定位', dur: null }
 }
