@@ -75,8 +75,9 @@ function SignalBars({ rssi }) {
     );
   }
   
-  // 计算总高度（范围 2-9px，适配电池高度）
-  const height = Math.max(2, Math.min(9, Math.round(((rssi + 90) / 50) * 9)));
+  // 计算总高度（范围 2-11px，适配电池图标高度）
+  // 电池图标总高度 11px，让最高格对齐这个高度
+  const height = Math.max(2, Math.min(11, Math.round(((rssi + 90) / 50) * 11)));
   
   // 第 1 格：0.25 倍高，第 2 格：0.5 倍高，第 3 格：0.75 倍高，第 4 格：1 倍高
   const ratios = [0.25, 0.5, 0.75, 1];

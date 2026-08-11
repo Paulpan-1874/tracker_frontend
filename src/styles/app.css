@@ -233,6 +233,8 @@ html, body {
 .signal {
   display: inline-flex;
   align-items: center;
+  height: 11px; /* 与电池图标高度一致 */
+  flex-shrink: 0; /* 防止被压缩 */
 }
 
 .badge {
