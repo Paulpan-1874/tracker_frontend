@@ -130,12 +130,13 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
+  width: 100%;
 }
 .tile-status-left {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 4px;
+  flex: 1;
 }
 .tile-status-text {
   font-size: 12px;
@@ -231,8 +232,7 @@ html, body {
 /* 信号条：4 格，RSSI 越大越好 */
 .signal {
   display: inline-flex;
-  align-items: flex-end;
-  gap: 2px;
+  align-items: center;
 }
 
 .badge {

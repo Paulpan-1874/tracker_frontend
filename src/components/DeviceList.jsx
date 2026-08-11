@@ -67,29 +67,29 @@ function SignalBars({ rssi }) {
   if (rssi == null) {
     // 无信号数据：显示 4 个点（像 iPhone 待搜索状态）
     return (
-      <svg className="signal" viewBox="0 0 16 14" width="42" height="14" aria-hidden="true">
+      <svg className="signal" viewBox="0 0 16 11" width="42" height="11" aria-hidden="true">
         {[0, 1, 2, 3].map((i) => (
-          <circle key={i} cx={i * 4 + 2} cy="10" r="2" fill="#fff" />
+          <circle key={i} cx={i * 4 + 2} cy="8.5" r="1.8" fill="#fff" />
         ))}
       </svg>
     );
   }
   
-  // 计算总高度（范围 2-10px）
-  const height = Math.max(2, Math.min(10, Math.round(((rssi + 90) / 50) * 10)));
+  // 计算总高度（范围 2-9px，适配电池高度）
+  const height = Math.max(2, Math.min(9, Math.round(((rssi + 90) / 50) * 9)));
   
   // 第 1 格：0.25 倍高，第 2 格：0.5 倍高，第 3 格：0.75 倍高，第 4 格：1 倍高
   const ratios = [0.25, 0.5, 0.75, 1];
   
   return (
-    <svg className="signal" viewBox="0 0 16 14" width="42" height="14" aria-hidden="true">
+    <svg className="signal" viewBox="0 0 16 11" width="42" height="11" aria-hidden="true">
       {ratios.map((ratio, i) => {
         const barHeight = Math.floor(height * ratio);
         return (
           <rect
             key={i}
             x={2 + i * 4}
-            y={14 - barHeight}
+            y={11 - barHeight}
             width="3.2"
             height={barHeight}
             rx="0.5"
@@ -188,10 +188,10 @@ export default function DeviceList({ devices, onSelect }) {
                 <span className="tile-state">{loc.text}</span>
               </span>
             </div>
-            {/* 底部：左下角版本号（常驻），右下角时间（离线显示最近上报，在线仍显示时间便于核对）*/}
+            {/* 底部：左下角版本号（常驻），右下角时间（仅离线显示）*/}
             <div className="tile-foot">
               {version && <span className="tile-ver">v{version}</span>}
-              <span className="tile-time">{formatLastSeen(d.lastSeen)}</span>
+              {!d.online && <span className="tile-time">{formatLastSeen(d.lastSeen)}</span>}
             </div>
           </li>
         )
