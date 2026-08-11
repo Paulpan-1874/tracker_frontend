@@ -65,11 +65,11 @@ function SignalBars({ rssi }) {
   const emptyColor = 'rgba(148, 163, 184, 0.18)';
   
   if (rssi == null) {
-    // 无信号数据：显示 4 个点（像 iPhone 待搜索状态）
+    // 无信号数据：显示 4 个灰点（像 iPhone 待搜索状态）
     return (
       <svg className="signal" viewBox="0 0 16 11" width="42" height="11" aria-hidden="true">
         {[0, 1, 2, 3].map((i) => (
-          <circle key={i} cx={i * 4 + 2} cy="8.5" r="1.8" fill="#fff" />
+          <circle key={i} cx={i * 4 + 2} cy="8.5" r="1.8" fill={emptyColor} />
         ))}
       </svg>
     );
@@ -135,9 +135,12 @@ export default function DeviceList({ devices, onSelect }) {
         const pickBatt = (s) =>
           s && s.batt != null ? s.batt : s && s.vbat != null ? toBattPct(s.vbat) : null
         const batt = pickBatt(t) ?? pickBatt(d.location) ?? pickBatt(d.status)
-        // 信号回退：实时遥测优先，无则 retained 在线状态保底
+        // 信号回退：实时遥测优先 → retained 在线状态保底 → 无数据则显示待搜索状态
         // RSSI: -50~好、-70~中、-80~弱、<-90 极弱；前端用 4 格色带：绿/黄/橙/红
-        const rssi = t.rssi ?? d.status?.rssi ?? -60
+        // 力求数据真实：不伪造信号值，没有就明确标记为无数据
+        const rssi = typeof t.rssi === 'number' ? t.rssi :
+                     typeof d.status?.rssi === 'number' ? d.status.rssi :
+                     null /* 无信号数据 */
         // 电压回退：实时遥测 → retained 位置携带的 vbat
         const vbat = t.vbat != null ? t.vbat : d.location && d.location.vbat != null ? d.location.vbat : null
         // 固件版本两级回退：实时遥测 → retained 在线状态
