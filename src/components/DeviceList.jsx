@@ -78,10 +78,13 @@ export default function DeviceList({ devices, onSelect }) {
               : d.status && d.status.vbat != null
                 ? d.status.vbat
                 : null
+        // 固件版本两级回退 (同 vbat): 实时遥测 → retained 在线状态 (刷新后保底)
+        const version = t.version || (d.status && d.status.version) || null
         const tip = [
           d.imei,
           d.online ? '在线' : '离线',
           vbat != null ? formatVbat(vbat) : null,
+          version ? `固件 v${version}` : null,
           d.online ? null : formatLastSeen(d.lastSeen)
         ]
           .filter(Boolean)
@@ -112,12 +115,14 @@ export default function DeviceList({ devices, onSelect }) {
                 <span className="tile-state">{loc.text}</span>
               </span>
             </div>
-            {/* 底部: 小指示灯 + 在线文字(左), 最近上报(右) */}
+            {/* 底部: 小指示灯 + 在线文字(左); 在线时右侧显示固件版本, 离线时显示最近上报 */}
             <div className="tile-foot">
               <span className={`tile-lamp ${d.online ? 'lamp-on' : 'lamp-off'}`} />
               <span className="tile-net">{d.online ? '在线' : '离线'}</span>
-              {/* 在线时不显示最后时间 (在线本身就是最新状态) */}
-              {!d.online && <span className="tile-time">{formatLastSeen(d.lastSeen)}</span>}
+              {/* 在线时不显示最后时间 (在线本身就是最新状态), 改显示固件版本便于确认 FOTA 结果 */}
+              {d.online
+                ? version && <span className="tile-ver">v{version}</span>
+                : <span className="tile-time">{formatLastSeen(d.lastSeen)}</span>}
             </div>
           </li>
         )

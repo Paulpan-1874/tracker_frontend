@@ -17,6 +17,8 @@ export default function DeviceDetail({ device, onBack, sendCommand }) {
   const [customAction, setCustomAction] = useState('')
   const [lastCmd, setLastCmd] = useState(null)
   const t = device.telemetry || {}
+  // 固件版本两级回退 (同列表页): 实时遥测 → retained 在线状态
+  const version = t.version || (device.status && device.status.version) || null
 
   // 最后定位结果 (唯一来源: retained location): 成功带坐标, 失败带 reason
   const loc = device.location
@@ -51,6 +53,7 @@ export default function DeviceDetail({ device, onBack, sendCommand }) {
         <Row k="信号 CSQ" v={t.csq} />
         <Row k="电池电压" v={formatVbat(t.vbat != null ? t.vbat : loc && loc.vbat)} />
         <Row k="ICCID" v={t.iccid} />
+        <Row k="固件版本" v={version ? `v${version}` : undefined} />
         <Row k="运行时长" v={t.uptime != null ? `${t.uptime} 秒` : undefined} />
         <Row k="上报时间" v={t.time} />
         <Row k="最近收到" v={formatLastSeen(device.lastSeen)} />

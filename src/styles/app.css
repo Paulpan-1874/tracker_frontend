@@ -188,6 +188,11 @@ html, body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* 固件版本 (在线时占据 tile-time 同位置, 确认 FOTA 升级结果用) */
+.tile-ver {
+  margin-left: auto;
+  color: var(--accent);
+}
 
 .badge {
   font-size: 12px;
