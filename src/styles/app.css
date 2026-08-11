@@ -107,11 +107,59 @@ html, body {
 }
 
 /* 第一行: 左IMEI 右电池图标 */
+/* 第一行：左上在线状态灯，右上信号 4 格 + 电池 */
 .tile-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 6px;
+}
+.tile-lamp {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.tile-lamp.lamp-on {
+  background: #38bdf8;
+  box-shadow: 0 0 5px rgba(56, 189, 248, 0.8);
+}
+.tile-lamp.lamp-off { background: rgba(148, 163, 184, 0.4); }
+/* 第一行：左上在线状态 (灯 + 文字), 右上信号 + 电池 */
+.tile-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.tile-status-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.tile-status-text {
+  font-size: 12px;
+  line-height: 1;
+}
+.tile-status-text.status-online {
+  color: var(--text-dim);
+}
+.tile-status-text.status-offline {
+  color: var(--text-dim);
+}
+/* 右侧组：信号 + 电池，缩小间距并居中对齐 */
+.tile-right-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+/* 第二行：IMEI（自适应截断）*/
+.tile-imei-row {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 /* IMEI 自适应截断 (后期支持自定义设备名) */
 .tile-imei {
@@ -124,9 +172,9 @@ html, body {
   flex: 1;
   min-width: 0;
 }
-/* 电池图标描边跟随文字色, 格色由组件内联控制 */
+/* 电池图标描边跟随文字色，格色由组件内联控制 */
 .batt { color: var(--text-dim); flex-shrink: 0; }
-/* 第二行: 天线组件 (图标 + 耗时/状态两行), 独立一行 */
+/* 第三行：天线 + 定位状态（新增独立一行）*/
 .tile-loc {
   display: flex;
   align-items: center;
@@ -149,7 +197,7 @@ html, body {
 }
 .tile-state { font-size: 12px; line-height: 1.25; }
 .tile-dur { font-size: 12px; color: var(--text-dim); line-height: 1.25; }
-/* 无耗时时隐身占位: 不可见但保留行高, 状态文字位置恒定 */
+/* 无耗时时隐身占位：不可见但保留行高，状态文字位置恒定 */
 .tile-dur.dur-empty { visibility: hidden; }
 /* 定位状态色 */
 .tile-state-locating .tile-state {
@@ -161,7 +209,7 @@ html, body {
 .tile-state-noresp .tile-state { color: #94a3b8; }
 .tile-state-none .tile-state { color: var(--text-dim); }
 
-/* 第三行: 小指示灯 + 在线文字(左), 最近上报(右) */
+/* 底部：左下角版本号（常驻），右下角时间（离线显示最近上报，在线仍显示时间便于核对）*/
 .tile-foot {
   display: flex;
   align-items: center;
@@ -171,27 +219,20 @@ html, body {
   white-space: nowrap;
   overflow: hidden;
 }
-.tile-lamp {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.tile-lamp.lamp-on {
-  background: #38bdf8;
-  box-shadow: 0 0 5px rgba(56, 189, 248, 0.8);
-}
-.tile-lamp.lamp-off { background: rgba(148, 163, 184, 0.4); }
-.tile-net { flex-shrink: 0; }
 .tile-time {
   margin-left: auto;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* 固件版本 (在线时占据 tile-time 同位置, 确认 FOTA 升级结果用) */
+/* 固件版本（常驻）*/
 .tile-ver {
-  margin-left: auto;
-  color: var(--accent);
+  color: var(--text-dim);
+}
+/* 信号条：4 格，RSSI 越大越好 */
+.signal {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
 }
 
 .badge {
@@ -202,6 +243,7 @@ html, body {
 }
 .badge-online { background: rgba(52, 211, 153, 0.18); color: var(--green); }
 .badge-offline { background: rgba(148, 163, 184, 0.15); color: var(--text-dim); }
+/* 信号条颜色 */
 
 /* ===== 详情页 ===== */
 .back {
