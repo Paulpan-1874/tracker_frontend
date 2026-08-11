@@ -51,6 +51,8 @@ export default function FleetMap({ points, satellite }) {
               ? [new AMap.TileLayer.Satellite(), new AMap.TileLayer.RoadNet()]
               : [new AMap.TileLayer()]
           })
+          // 加载 MoveAnimation 插件: marker 实例获得 moveTo, 位置更新/新点出现平滑过渡
+          AMap.plugin(['AMap.MoveAnimation'], () => {})
         }
         // 增量同步标记: 每个 imei 只保留最新位置
         const markers = markersRef.current
@@ -58,14 +60,24 @@ export default function FleetMap({ points, satellite }) {
         points.forEach((p) => {
           seen.add(p.imei)
           const pos = [p.lng, p.lat]
-          if (markers[p.imei]) {
-            markers[p.imei].setPosition(pos)
+          const marker = markers[p.imei]
+          if (marker) {
+            // 位置更新: 有动画插件则平滑移动, 否则直接跳转
+            if (marker.moveTo) {
+              marker.moveTo(pos, { duration: 500 })
+            } else {
+              marker.setPosition(pos)
+            }
           } else {
-            markers[p.imei] = new AMap.Marker({
+            // 新定位点: 插件已加载则先建在偏南位置再 moveTo 回正, 形成"飞入"入场动画
+            const pluginReady = !!AMap.MoveAnimation
+            const m = new AMap.Marker({
               map: mapRef.current,
-              position: pos,
+              position: pluginReady ? [pos[0], pos[1] - 0.008] : pos,
               title: `设备 ${p.imei}`
             })
+            if (pluginReady) m.moveTo(pos, { duration: 600 })
+            markers[p.imei] = m
           }
         })
         // 清理已不存在的点 (设备换了新定位不会重复, 仅防御性处理)
