@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { COMMANDS } from '../config'
-import { formatLastSeen, formatVbat, wgs84ToGcj02 } from '../utils'
+import { formatLastSeen, formatVbat, toBattPct, wgs84ToGcj02 } from '../utils'
 import MapView from './MapView.jsx'
 
 function Row({ k, v }) {
@@ -22,6 +22,10 @@ export default function DeviceDetail({ device, onBack, sendCommand }) {
 
   // 最后定位结果 (唯一来源: retained location): 成功带坐标, 失败带 reason
   const loc = device.location
+  // 电量百分比由固件算好随 batt 上报; 旧固件只带 vbat 时同规则推导作过渡
+  const battRaw = t.batt != null ? t.batt : loc && loc.batt != null ? loc.batt : null
+  const vbatRaw = t.vbat != null ? t.vbat : loc && loc.vbat
+  const batt = battRaw != null ? battRaw : toBattPct(vbatRaw)
   const gpsFailed = loc && loc.status === 'failed'
   const gpsRaw = !gpsFailed && loc && loc.lat != null ? loc : null
   const gps = gpsRaw ? { ...gpsRaw, ...wgs84ToGcj02(gpsRaw.lat, gpsRaw.lng) } : null
@@ -51,7 +55,8 @@ export default function DeviceDetail({ device, onBack, sendCommand }) {
         <h3>最新状态</h3>
         <Row k="信号 RSSI" v={t.rssi} />
         <Row k="信号 CSQ" v={t.csq} />
-        <Row k="电池电压" v={formatVbat(t.vbat != null ? t.vbat : loc && loc.vbat)} />
+        <Row k="电池电量" v={batt != null ? `${batt}%` : undefined} />
+        <Row k="电池电压" v={formatVbat(vbatRaw)} />
         <Row k="ICCID" v={t.iccid} />
         <Row k="固件版本" v={version ? `v${version}` : undefined} />
         <Row k="运行时长" v={t.uptime != null ? `${t.uptime} 秒` : undefined} />

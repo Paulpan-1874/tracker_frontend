@@ -17,6 +17,14 @@ export function formatVbat(mv) {
   return num > 1000 ? `${(num / 1000).toFixed(2)} V` : `${num} mV`
 }
 
+// mV -> 电量百分比: 与固件 battery.level() 同规则 (3400mV=空, 4200mV=满)
+// 仅作过渡回退: 旧固件消息只带 vbat 没有 batt 字段, 设备 FOTA 升级完成后即可移除
+export function toBattPct(mv) {
+  const num = Number(mv)
+  if (Number.isNaN(num)) return null
+  return Math.round(Math.min(1, Math.max(0, (num - 3400) / 800)) * 100)
+}
+
 // ====== WGS-84 -> GCJ-02 坐标系纠偏 ======
 // GPS 原始坐标是 WGS-84, 高德/腾讯使用国测局 GCJ-02 (火星坐标系),
 // 不纠偏会有几百米偏差。以下为标准的本地换算算法, 无需调接口。

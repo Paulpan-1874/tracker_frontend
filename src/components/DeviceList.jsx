@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react'
-import { formatLastSeen, formatVbat } from '../utils'
+import { formatLastSeen, formatVbat, toBattPct } from '../utils'
 
-// 电池图标: 四格电, 颜色随总电量: 3-4格=绿, 2格=黄, 1格=红
-// 电压映射: 3400mV=空 → 4200mV=满 (锂电工作区间)
-function BatteryIcon({ mv }) {
-  const pct = Math.min(1, Math.max(0, (mv - 3400) / 800))
-  const lit = Math.round(pct * 4)
+// 电池图标: 四格电, 颜色随电量: 3-4格=绿, 2格=黄, 1格=红
+// 电量百分比由固件计算 (batt 字段) 直接展示, 前端不再持有电压映射规则
+function BatteryIcon({ pct }) {
+  const lit = Math.round((Math.min(100, Math.max(0, pct)) / 100) * 4)
   const color = lit >= 3 ? 'var(--green)' : lit === 2 ? '#fbbf24' : 'var(--red)'
   return (
     <svg className="batt" viewBox="0 0 22 11" width="22" height="11" aria-hidden="true">
@@ -68,21 +67,20 @@ export default function DeviceList({ devices, onSelect }) {
       {devices.map((d) => {
         const loc = locInfo(d)
         const t = d.telemetry || {}
-        // 电压三级回退: 实时遥测 (非 retained, 页面刷新即失) → retained 位置携带的 vbat
-        // → retained 在线/离线状态携带的 vbat (常驻 Broker, 刷新后保底可见)
-        const vbat =
-          t.vbat != null
-            ? t.vbat
-            : d.location && d.location.vbat != null
-              ? d.location.vbat
-              : d.status && d.status.vbat != null
-                ? d.status.vbat
-                : null
-        // 固件版本两级回退 (同 vbat): 实时遥测 → retained 在线状态 (刷新后保底)
+        // 电量三级回退: 实时遥测 (非 retained, 页面刷新即失) → retained 位置携带的 batt
+        // → retained 在线/离线状态携带的 batt (常驻 Broker, 刷新后保底可见);
+        // 旧固件消息只带 vbat 时用 toBattPct 同规则推导作过渡, FOTA 升级完成后失效
+        const pickBatt = (s) =>
+          s && s.batt != null ? s.batt : s && s.vbat != null ? toBattPct(s.vbat) : null
+        const batt = pickBatt(t) ?? pickBatt(d.location) ?? pickBatt(d.status)
+        // 电压回退 (悬浮提示用): 实时遥测 → retained 位置携带的 vbat
+        const vbat = t.vbat != null ? t.vbat : d.location && d.location.vbat != null ? d.location.vbat : null
+        // 固件版本两级回退 (同 batt): 实时遥测 → retained 在线状态 (刷新后保底)
         const version = t.version || (d.status && d.status.version) || null
         const tip = [
           d.imei,
           d.online ? '在线' : '离线',
+          batt != null ? `电量 ${batt}%` : null,
           vbat != null ? formatVbat(vbat) : null,
           version ? `固件 v${version}` : null,
           d.online ? null : formatLastSeen(d.lastSeen)
@@ -100,9 +98,9 @@ export default function DeviceList({ devices, onSelect }) {
             <div className="tile-top">
               {/* 第一行: IMEI(自适应截断) + 电池图标 */}
               <span className="tile-imei">{d.imei}</span>
-              {vbat != null && (
-                <span className="tile-vbat" title={formatVbat(vbat)}>
-                  <BatteryIcon mv={vbat} />
+              {batt != null && (
+                <span className="tile-vbat" title={`电量 ${batt}%${vbat != null ? ` · ${formatVbat(vbat)}` : ''}`}>
+                  <BatteryIcon pct={batt} />
                 </span>
               )}
             </div>
