@@ -96,10 +96,10 @@ html, body {
   transition: background 0.15s;
 }
 .device-tile:active { background: var(--panel-2); }
-/* 整个格子就是指示灯: 在线描粗绿边+光晕, 离线黯淡 */
+/* 整个格子就是指示灯：在线描粗蓝边 + 光晕（与面板灯阵保持一致）, 离线黯淡 */
 .device-tile.tile-on {
-  border-color: rgba(52, 211, 153, 0.8);
-  box-shadow: 0 0 12px rgba(52, 211, 153, 0.35), inset 0 0 8px rgba(52, 211, 153, 0.08);
+  border-color: rgba(56, 189, 248, 0.8);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.35), inset 0 0 8px rgba(56, 189, 248, 0.08);
 }
 .device-tile.tile-off {
   opacity: 0.6;
