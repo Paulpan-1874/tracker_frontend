@@ -3,8 +3,9 @@ import { formatLastSeen, formatVbat, toBattPct } from '../utils'
 
 // 电池图标: 四格电, 颜色随电量: 3-4格=绿, 2格=黄, 1格=红
 // 电量百分比由固件计算 (batt 字段) 直接展示, 前端不再持有电压映射规则
+// 分段按 25% 均分向上取整: 1-25→1格, 26-50→2格, 51-75→3格, 76-100→满4格, 0→空
 function BatteryIcon({ pct }) {
-  const lit = Math.round((Math.min(100, Math.max(0, pct)) / 100) * 4)
+  const lit = Math.ceil(Math.min(100, Math.max(0, pct)) / 25)
   const color = lit >= 3 ? 'var(--green)' : lit === 2 ? '#fbbf24' : 'var(--red)'
   return (
     <svg className="batt" viewBox="0 0 22 11" width="22" height="11" aria-hidden="true">
