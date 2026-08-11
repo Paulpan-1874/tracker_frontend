@@ -26,8 +26,7 @@ function BatteryIcon({ pct }) {
   )
 }
 
-// 定位信息: 状态 + 用时; 状态统一走 locStatusOf 权威判定
-// (离线/失联的残留 locating 会被判为失败, 不会永远"定位中"跑表)
+// 定位信息: 状态 + 用时; 状态统一走 locStatusOf (纯消息驱动, 前端不做时间推断)
 function locInfo(d) {
   const st = locStatusOf(d)
   if (st === 'locating') {
@@ -42,6 +41,8 @@ function locInfo(d) {
     const dur = recv ? Math.max(0, Math.floor((Date.now() - recv) / 1000)) : null
     return { key: 'locating', text: '定位中…', dur }
   }
+  // 广播去重跳过 (broadcast_skipped) 不单独展示: 用户只关注定位结果,
+  // 跳过意味着同一 cmd_id 已执行过, retained 里就是本次广播的真实结果, 维持原灯色即可
   if (st === 'ok') return { key: 'ok', text: '定位成功', dur: d.location.duration }
   if (st === 'failed') return { key: 'failed', text: '定位失败', dur: d.location && d.location.duration }
   if (d.noResponse) return { key: 'noresp', text: '未响应', dur: null }
@@ -50,7 +51,7 @@ function locInfo(d) {
 
 export default function DeviceList({ devices, onSelect }) {
   // 需要定时重渲染的两种场景: 搜星中要实时计时; 离线设备的"x秒前"要自己走动
-  // 搜星判定走 locStatusOf: 超时兜底翻转时也依赖每秒 tick 才能及时生效
+  // (tick 只驱动展示计时, 状态翻转本身纯消息驱动)
   const anyLocating = devices.some((d) => locStatusOf(d) === 'locating')
   const anyOffline = devices.some((d) => !d.online && d.lastSeen)
   // 秒级显示时每秒刷一次; 只剩分钟/小时粒度时 60 秒刷一次, 避免无谓重渲染

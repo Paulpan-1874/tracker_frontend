@@ -91,7 +91,7 @@ export function useMqtt(userId) {
 
         // 最后位置 (retained): 地图与定位状态的唯一数据源, 直接覆盖 location 字段, 不进 events
         // status: locating(过程态) → ok/failed(结果态); 空 retained = 已清除 (撤回广播时前端批量清空)
-        // receivedAt = 本地到达时间: 搜星存活判定与计时都基于它, 与设备时钟无关
+        // receivedAt = 本地到达时间: 仅供"定位中"计时展示, 不参与状态判定
         if (kind === 'location') {
           if (!payload.length) {
             return { ...prev, [imei]: { ...old, imei, location: null, locating: false, lastMsgAt: arrivedAt } }
@@ -109,7 +109,7 @@ export function useMqtt(userId) {
         }
 
         // 数据上报: 只更新遥测; 定位状态不从 data 取 (唯一来源是 retained location)
-        // lastMsgAt 同步刷新: 搜星心跳 (gps_searching) 也走这里, 是搜星存活信号
+        // lastMsgAt 同步刷新: 搜星心跳 (gps_searching) 也走这里, 供"定位中"计时展示
         return {
           ...prev,
           [imei]: {

@@ -60,16 +60,6 @@ function Console({ auth, onLogout }) {
   const current = selected ? list.find((d) => d.imei === selected) : null
   const onlineCount = list.filter((d) => d.online).length
 
-  // 有设备处于有效搜星中时每秒重渲染: 让 locStatusOf 的超时兜底及时把残留 locating 翻转为失败
-  // (灯阵没有消息驱动时, 不 tick 就会卡在黄灯呼吸)
-  const anyLocating = list.some((d) => locStatusOf(d) === 'locating')
-  const [, setTick] = useState(0)
-  useEffect(() => {
-    if (!anyLocating) return
-    const timer = setInterval(() => setTick((t) => t + 1), 1000)
-    return () => clearInterval(timer)
-  }, [anyLocating])
-
   // 汇总名下所有设备的最后位置 (唯一来源: retained location, WGS-84 → GCJ-02)
   const gpsPoints = list
     .map((d) => {
@@ -127,7 +117,7 @@ function Console({ auth, onLogout }) {
               {Array.from({ length: Math.max(list.length, 90) }).map((_, i) => {
                 const d = list[i]
                 if (!d) return <span key={`slot-${i}`} className="panel-lamp slot" />
-                // 定位状态走 locStatusOf 权威判定: 离线/超时的残留 locating 判为失败, 不会永远黄灯呼吸
+                // 定位状态走 locStatusOf: 纯消息驱动 (离线判定含 LWT), 前端不做时间推断
                 const locStatus = locStatusOf(d)
                 const cls =
                   locStatus === 'ok'

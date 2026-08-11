@@ -26,26 +26,16 @@ export function toBattPct(mv) {
 }
 
 // ====== 定位状态权威判定 ======
-// retained locating 只是过程态: 设备搜星途中断电/失联时, ok/failed 永远不会写入,
-// 前端不做兜底就会永远卡在"定位中"跑表。
-// 判定只看 MQTT 消息流, 不看设备时间戳 (两端时钟可能不同步), 全部基于本地到达时间:
-// ① 设备离线 (休眠/断电不可能在搜星) → 立即判失败
-// ② 新固件 (locating 带 timeout 字段): 搜星期间每 10 秒有 gps_searching 心跳,
-//    超过 30 秒没收到该设备任何消息 → 搜星已中断, 判失败
-// ③ 旧固件 (无心跳): 回退固定超时, 从 locating 本地到达时间起算 (FOTA 全覆盖后可删)
-const SIGNAL_STALE_MS = 30000
-const LOCATING_FALLBACK_MS = 180000
-export function locStatusOf(d, now = Date.now()) {
+// 唯一数据源准则: 前端不做任何时间推断 (两端时钟可能不同步, 设备改超时参数前端就出新 bug),
+// 只对后端状态消息作出响应:
+// - retained locating + 设备在线 = 正在搜星
+// - 离线 (retained status, 含 LWT 遗嘱代发) = 不可能在搜星, 残留 locating 判失败
+// 设备突然断电时黄灯会等到 LWT 到达才翻转 (~1.5 倍 keepalive), 这是为准则接受的代价
+export function locStatusOf(d) {
   const loc = d.location
   if (!loc || !loc.status) return null
   if (loc.status !== 'locating') return loc.status
   if (!d.online) return 'failed'
-  const signalAt = d.lastMsgAt || loc.receivedAt
-  if (loc.timeout != null) {
-    if (signalAt && now - signalAt > SIGNAL_STALE_MS) return 'failed'
-  } else if (!signalAt || now - signalAt > LOCATING_FALLBACK_MS) {
-    return 'failed'
-  }
   return 'locating'
 }
 
