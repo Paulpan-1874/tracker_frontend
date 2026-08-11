@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { formatLastSeen, formatVbat, toBattPct } from '../utils'
+import { formatLastSeen, formatVbat, toBattPct, locStatusOf } from '../utils'
 
 // 电池图标: 四格电, 颜色随电量: 3-4格=绿, 2格=黄, 1格=红
 // 电量百分比由固件计算 (batt 字段) 直接展示, 前端不再持有电压映射规则
@@ -26,23 +26,32 @@ function BatteryIcon({ pct }) {
   )
 }
 
-// 定位信息: 状态 + 用时; 定位中时用 retained 消息里的搜星起点 time 实时计时
+// 定位信息: 状态 + 用时; 状态统一走 locStatusOf 权威判定
+// (离线/失联的残留 locating 会被判为失败, 不会永远"定位中"跑表)
 function locInfo(d) {
-  if (d.locating) {
-    const start = Date.parse(d.location && d.location.time)
-    const dur = isNaN(start) ? null : Math.max(0, Math.floor((Date.now() - start) / 1000))
+  const st = locStatusOf(d)
+  if (st === 'locating') {
+    // 计时优先用搜星心跳携带的 elapsed (设备侧时长, 无时钟偏移, 刷新页面不归零),
+    // 加上心跳到达后本地流逝的秒数; 尚无心跳 (刚打开页面/旧固件) 时从 locating 到达时间起计
+    const t = d.telemetry || {}
+    if (t.event === 'gps_searching' && t.elapsed != null && d.lastMsgAt) {
+      const dur = t.elapsed + Math.max(0, Math.floor((Date.now() - d.lastMsgAt) / 1000))
+      return { key: 'locating', text: '定位中…', dur }
+    }
+    const recv = d.location && d.location.receivedAt
+    const dur = recv ? Math.max(0, Math.floor((Date.now() - recv) / 1000)) : null
     return { key: 'locating', text: '定位中…', dur }
   }
-  const loc = d.location
-  if (loc && loc.status === 'ok') return { key: 'ok', text: '定位成功', dur: loc.duration }
-  if (loc && loc.status === 'failed') return { key: 'failed', text: '定位失败', dur: loc.duration }
+  if (st === 'ok') return { key: 'ok', text: '定位成功', dur: d.location.duration }
+  if (st === 'failed') return { key: 'failed', text: '定位失败', dur: d.location && d.location.duration }
   if (d.noResponse) return { key: 'noresp', text: '未响应', dur: null }
   return { key: 'none', text: '未定位', dur: null }
 }
 
 export default function DeviceList({ devices, onSelect }) {
   // 需要定时重渲染的两种场景: 搜星中要实时计时; 离线设备的"x秒前"要自己走动
-  const anyLocating = devices.some((d) => d.locating)
+  // 搜星判定走 locStatusOf: 超时兜底翻转时也依赖每秒 tick 才能及时生效
+  const anyLocating = devices.some((d) => locStatusOf(d) === 'locating')
   const anyOffline = devices.some((d) => !d.online && d.lastSeen)
   // 秒级显示时每秒刷一次; 只剩分钟/小时粒度时 60 秒刷一次, 避免无谓重渲染
   const secondGranularity = anyLocating || devices.some((d) => !d.online && d.lastSeen && Date.now() - d.lastSeen < 60000)

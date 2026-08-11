@@ -61,10 +61,11 @@ export function useMqtt(userId) {
       } catch (e) {
         data = { raw: payload.toString() }
       }
-      // 最后上报时间取消息自带的 time (设备发布时间), 刷新页面收到 retained 重发时不会误判为"刚刚";
-      // 解析失败才回退本地时间
+      // 时间全部用本地到达时间 (lastMsgAt / receivedAt): 两端时钟可能不同步, 不解析设备时间戳;
+      // data.time 仅用于离线时展示"最后上报于"。消息解析失败才回退本地时间
       const parsedTime = data.time ? Date.parse(data.time) : NaN
       const now = isNaN(parsedTime) ? Date.now() : parsedTime
+      const arrivedAt = Date.now()
 
       setDevices((prev) => {
         const old = prev[imei] || { imei, events: [] }
@@ -82,36 +83,41 @@ export function useMqtt(userId) {
               status: data,
               hasStatus: true,
               online: !offline,
-              lastSeen: offline ? now : old.lastSeen
+              lastSeen: offline ? now : old.lastSeen,
+              lastMsgAt: arrivedAt
             }
           }
         }
 
         // 最后位置 (retained): 地图与定位状态的唯一数据源, 直接覆盖 location 字段, 不进 events
         // status: locating(过程态) → ok/failed(结果态); 空 retained = 已清除 (撤回广播时前端批量清空)
+        // receivedAt = 本地到达时间: 搜星存活判定与计时都基于它, 与设备时钟无关
         if (kind === 'location') {
           if (!payload.length) {
-            return { ...prev, [imei]: { ...old, imei, location: null, locating: false } }
+            return { ...prev, [imei]: { ...old, imei, location: null, locating: false, lastMsgAt: arrivedAt } }
           }
           return {
             ...prev,
             [imei]: {
               ...old,
               imei,
-              location: data,
-              locating: data.status === 'locating'
+              location: { ...data, receivedAt: arrivedAt },
+              locating: data.status === 'locating',
+              lastMsgAt: arrivedAt
             }
           }
         }
 
         // 数据上报: 只更新遥测; 定位状态不从 data 取 (唯一来源是 retained location)
+        // lastMsgAt 同步刷新: 搜星心跳 (gps_searching) 也走这里, 是搜星存活信号
         return {
           ...prev,
           [imei]: {
             ...old,
             imei,
             telemetry: data,
-            events: [...(old.events || []), data].slice(-30)
+            events: [...(old.events || []), data].slice(-30),
+            lastMsgAt: arrivedAt
           }
         }
       })

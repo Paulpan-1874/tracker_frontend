@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { COMMANDS } from '../config'
-import { formatLastSeen, formatVbat, toBattPct, wgs84ToGcj02 } from '../utils'
+import { formatLastSeen, formatVbat, toBattPct, wgs84ToGcj02, locStatusOf } from '../utils'
 import MapView from './MapView.jsx'
 
 function Row({ k, v }) {
@@ -26,7 +26,9 @@ export default function DeviceDetail({ device, onBack, sendCommand }) {
   const battRaw = t.batt != null ? t.batt : loc && loc.batt != null ? loc.batt : null
   const vbatRaw = t.vbat != null ? t.vbat : loc && loc.vbat
   const batt = battRaw != null ? battRaw : toBattPct(vbatRaw)
-  const gpsFailed = loc && loc.status === 'failed'
+  // 定位状态走 locStatusOf 权威判定: 离线/超时的残留 locating 判为失败, 不会永远显示"定位中"
+  const locSt = locStatusOf(device)
+  const gpsFailed = locSt === 'failed'
   const gpsRaw = !gpsFailed && loc && loc.lat != null ? loc : null
   const gps = gpsRaw ? { ...gpsRaw, ...wgs84ToGcj02(gpsRaw.lat, gpsRaw.lng) } : null
 
@@ -45,7 +47,7 @@ export default function DeviceDetail({ device, onBack, sendCommand }) {
 
       <div className="detail-head">
         <h2>{device.imei}</h2>
-        {device.locating && <span className="badge badge-locating">定位中…</span>}
+        {locSt === 'locating' && <span className="badge badge-locating">定位中…</span>}
         <span className={`badge ${device.online ? 'badge-online' : 'badge-offline'}`}>
           {device.online ? '在线' : '离线'}
         </span>

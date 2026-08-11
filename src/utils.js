@@ -25,6 +25,30 @@ export function toBattPct(mv) {
   return Math.round(Math.min(1, Math.max(0, (num - 3400) / 800)) * 100)
 }
 
+// ====== 定位状态权威判定 ======
+// retained locating 只是过程态: 设备搜星途中断电/失联时, ok/failed 永远不会写入,
+// 前端不做兜底就会永远卡在"定位中"跑表。
+// 判定只看 MQTT 消息流, 不看设备时间戳 (两端时钟可能不同步), 全部基于本地到达时间:
+// ① 设备离线 (休眠/断电不可能在搜星) → 立即判失败
+// ② 新固件 (locating 带 timeout 字段): 搜星期间每 10 秒有 gps_searching 心跳,
+//    超过 30 秒没收到该设备任何消息 → 搜星已中断, 判失败
+// ③ 旧固件 (无心跳): 回退固定超时, 从 locating 本地到达时间起算 (FOTA 全覆盖后可删)
+const SIGNAL_STALE_MS = 30000
+const LOCATING_FALLBACK_MS = 180000
+export function locStatusOf(d, now = Date.now()) {
+  const loc = d.location
+  if (!loc || !loc.status) return null
+  if (loc.status !== 'locating') return loc.status
+  if (!d.online) return 'failed'
+  const signalAt = d.lastMsgAt || loc.receivedAt
+  if (loc.timeout != null) {
+    if (signalAt && now - signalAt > SIGNAL_STALE_MS) return 'failed'
+  } else if (!signalAt || now - signalAt > LOCATING_FALLBACK_MS) {
+    return 'failed'
+  }
+  return 'locating'
+}
+
 // ====== WGS-84 -> GCJ-02 坐标系纠偏 ======
 // GPS 原始坐标是 WGS-84, 高德/腾讯使用国测局 GCJ-02 (火星坐标系),
 // 不纠偏会有几百米偏差。以下为标准的本地换算算法, 无需调接口。
