@@ -87,11 +87,13 @@ export default function FleetMap({ points, satellite }) {
             delete markers[imei]
           }
         })
-        // 视野自适应: 单点用适中缩放(避免过度放大), 多点框选全部
+        // 视野自适应：单点用适中 padding(避免过度贴近)，多点框选全部
         if (points.length === 1) {
-          mapRef.current.setZoomAndCenter(15, [points[0].lng, points[0].lat])
+          // 单点时设置较大 padding，让地图有舒适的视角范围，不会过于贴近
+          mapRef.current.setFitView(Object.values(markers), false, [100, 100, 100, 100])
         } else if (points.length > 1) {
-          mapRef.current.setFitView(Object.values(markers), false, [60, 60, 60, 60])
+          // 多点时用较小 padding，保证所有设备都在视野内且显示充分
+          mapRef.current.setFitView(Object.values(markers), false, [80, 80, 80, 80])
         }
       })
       .catch(() => {
