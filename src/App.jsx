@@ -65,8 +65,12 @@ function Console({ auth, onLogout }) {
   const gpsPoints = list
     .map((d) => {
       const e = d.location
-      if (!e || e.lat == null || e.lng == null) return null
-      const g = wgs84ToGcj02(e.lat, e.lng)
+      if (!e) return null
+      // isFinite 严判双坐标: 拦截 null/缺失/脏字符串, 避免 NaN 流入地图触发 LngLat(NaN) 报错
+      const lat = Number(e.lat)
+      const lng = Number(e.lng)
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+      const g = wgs84ToGcj02(lat, lng)
       return { imei: d.imei, lat: g.lat, lng: g.lng }
     })
     .filter(Boolean)

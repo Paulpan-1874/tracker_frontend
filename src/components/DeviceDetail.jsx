@@ -29,8 +29,10 @@ export default function DeviceDetail({ device, onBack, sendCommand }) {
   // 定位状态走 locStatusOf 权威判定: 离线/超时的残留 locating 判为失败, 不会永远显示"定位中"
   const locSt = locStatusOf(device)
   const gpsFailed = locSt === 'failed'
-  const gpsRaw = !gpsFailed && loc && loc.lat != null ? loc : null
-  const gps = gpsRaw ? { ...gpsRaw, ...wgs84ToGcj02(gpsRaw.lat, gpsRaw.lng) } : null
+  // 双坐标都用 isFinite 严判 (只查 lat 会漏掉缺 lng 的脏数据, wgs84ToGcj02 会算出 NaN
+  // 传给地图触发 LngLat(NaN, NaN) 报错)
+  const gpsRaw = !gpsFailed && loc && Number.isFinite(Number(loc.lat)) && Number.isFinite(Number(loc.lng)) ? loc : null
+  const gps = gpsRaw ? { ...gpsRaw, ...wgs84ToGcj02(Number(gpsRaw.lat), Number(gpsRaw.lng)) } : null
   // 搜星轮次 (固件随定位消息上报 attempt/attempts_total, 旧固件无字段时不展示)
   const rounds = loc && loc.attempt != null && loc.attempts_total != null
     ? `${loc.attempt}/${loc.attempts_total}`
