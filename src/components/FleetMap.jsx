@@ -132,6 +132,7 @@ export default function FleetMap({ points, satellite, hiddenPOI = true }) {
         // 增量同步标记：每个 imei 只保留最新位置
         const markers = markersRef.current
         const seen = new Set()
+        let hasNewMarker = false // 本次是否有新标记诞生 (决定视野调整方式)
         points.forEach((p) => {
           seen.add(p.imei)
           const pos = [p.lng, p.lat]
@@ -145,6 +146,7 @@ export default function FleetMap({ points, satellite, hiddenPOI = true }) {
             }
           } else {
             // 新定位点: 插件已加载则先建在偏南位置再 moveTo 回正, 形成"飞入"入场动画
+            hasNewMarker = true
             const pluginReady = !!AMap.MoveAnimation
             const m = new AMap.Marker({
               map: mapRef.current,
@@ -162,9 +164,10 @@ export default function FleetMap({ points, satellite, hiddenPOI = true }) {
             delete markers[imei]
           }
         })
-        // 视野策略:
-        // - 定位数据变化 (新标记出现/已有设备位置更新) → 强制拉走视角框选全部,
-        //   定位是低频珍贵事件, 必须让用户感知到 (对比坐标快照判定, 避免无关渲染抢视角)
+        // 视野策略 (定位数据变化时, 对比坐标快照判定, 无关渲染不触发):
+        // - 所有标点都在视野内 → 不动 (不打扰用户当前观察)
+        // - 已有设备移动出界 → 平移到点集几何中心, 保持缩放级别 (视角平稳不伸缩)
+        // - 新设备出现且容纳不下 → setFitView 框选全部 (新设备必须看得见, 统一留白 80)
         // - 图层切换重建 → 跳过 (保持切换前视角)
         const snapshot = {}
         let changed = Object.keys(positionsRef.current).length !== points.length
@@ -175,8 +178,19 @@ export default function FleetMap({ points, satellite, hiddenPOI = true }) {
         })
         positionsRef.current = snapshot
         if (changed && !skipFit && points.length > 0) {
-          // 统一留白 80: 单点/多点一致, 避免切换时留白忽大忽小
-          mapRef.current.setFitView(Object.values(markers), false, [80, 80, 80, 80])
+          const ms = Object.values(markers)
+          const bounds = mapRef.current.getBounds()
+          const allVisible = bounds && ms.every((m) => bounds.contains(m.getPosition()))
+          if (!allVisible) {
+            if (hasNewMarker) {
+              mapRef.current.setFitView(ms, false, [80, 80, 80, 80])
+            } else {
+              // 点集几何中心: 只平移不缩放, 避免频繁定位时视角反复伸缩
+              const clng = points.reduce((s, p) => s + p.lng, 0) / points.length
+              const clat = points.reduce((s, p) => s + p.lat, 0) / points.length
+              mapRef.current.panTo([clng, clat])
+            }
+          }
         }
       })
       .catch(() => {
