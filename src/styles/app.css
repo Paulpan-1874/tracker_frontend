@@ -413,11 +413,11 @@ html, body {
   display: flex;
   gap: 6px;
 }
-/* 单按钮样式 (旧布局使用) */
-.topbar .map-layer-btn {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
+/* 按钮组内的按钮跟随 flex 布局，覆盖基础类的绝对定位 (否则会重叠) */
+.topbar .map-controls .map-layer-btn {
+  position: static;
+  top: auto;
+  right: auto;
 }
 .map-error {
   padding: 24px 12px;
