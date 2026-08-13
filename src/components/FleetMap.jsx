@@ -90,7 +90,8 @@ export default function FleetMap({ points, satellite, hiddenPOI = true }) {
               mapOpts.layers.push(new AMap.TileLayer.RoadNet())
             }
           } else {
-            mapOpts.mapStyle = 'amap://styles/grey'  // 灰色风格减少干扰
+            // 普通图用标准底图: 自定义 mapStyle (grey) 在销毁重建后样式资源加载失败会黑屏
+            mapOpts.layers = [new AMap.TileLayer()]
           }
           mapRef.current = new AMap.Map(containerRef.current, mapOpts)
 
