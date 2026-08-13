@@ -51,7 +51,7 @@ export default function FleetMap({ points, satellite }) {
             dragEnable: true,             // 启用拖拽
             moveAnim: false,              // 地图平移动画关闭（提升滑动响应速度）
             zoomAnim: false,              // 缩放动画关闭（提升缩放响应速度）
-            // 地图层级配置：卫星模式下叠加路网保证路名可见
+            // 地图层级配置：卫星图不叠加路网，避免重复
             layers: satelliteRef.current
               ? [
                   // 高清卫星图层：支持最大 20 级缩放（原默认只到 16-18 级）
@@ -63,7 +63,6 @@ export default function FleetMap({ points, satellite }) {
                     size: [256, 256],
                     stylePrefix: 'webst',
                   }),
-                  new AMap.TileLayer.RoadNet()
                 ]
               : [new AMap.TileLayer()]
           })
