@@ -53,7 +53,18 @@ export default function FleetMap({ points, satellite }) {
             zoomAnim: false,              // 缩放动画关闭（提升缩放响应速度）
             // 地图层级配置：卫星模式下叠加路网保证路名可见
             layers: satelliteRef.current
-              ? [new AMap.TileLayer.Satellite(), new AMap.TileLayer.RoadNet()]
+              ? [
+                  // 高清卫星图层：支持最大 20 级缩放（原默认只到 16-18 级）
+                  new AMap.TileLayer({
+                    zIndex: 1,
+                    minZoom: 3,
+                    maxZoom: 20,
+                    urlTemplate: 'https://webst0{1-4}.is.autonavi.com/appmaptile/satellite/zoom/{z}/x/{x}/y/{y}.png',
+                    size: [256, 256],
+                    stylePrefix: 'webst',
+                  }),
+                  new AMap.TileLayer.RoadNet()
+                ]
               : [new AMap.TileLayer()]
           })
             
