@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { AMAP_KEY } from '../config'
 
+// 安全密钥：2021-12-02 后申请的 key 必须配置，需在加载脚本前设置
+if (!window._AMapSecurityConfig) {
+  window._AMapSecurityConfig = {
+    securityJsCode: 'd7f9c8cc45453eed7a4a4e0bd7643b03'
+  }
+}
+
 // 动态加载高德 JS API (单例缓存, 避免重复插入 script)
 let amapPromise = null
 function loadAMap() {
@@ -8,7 +15,7 @@ function loadAMap() {
   if (!amapPromise) {
     amapPromise = new Promise((resolve, reject) => {
       const s = document.createElement('script')
-      // v1.4.x 只需 key, 无需 securityJsCode
+      // v1.4.x + 安全密钥 (_AMapSecurityConfig) 组合
       s.src = `https://webapi.amap.com/maps?v=1.4.17&key=${AMAP_KEY}`
       s.onload = () => resolve(window.AMap)
       s.onerror = () => {

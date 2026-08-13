@@ -1,21 +1,38 @@
 import { useEffect, useRef, useState } from 'react'
 import { AMAP_KEY } from '../config'
 
+// 设置高德安全密钥（必须在加载地图脚本之前）
+if (window._AMapSecurityConfig) {
+  console.log('⚠️ AMapSecurityConfig already set')
+} else {
+  window._AMapSecurityConfig = {
+    securityJsCode: 'd7f9c8cc45453eed7a4a4e0bd7643b03'
+  }
+  console.log('✅ Security config set')
+}
+
 // 动态加载高德 JS API (与 MapView 共享单例缓存)
 let amapPromise = null
 function loadAMap() {
   if (window.AMap) return Promise.resolve(window.AMap)
   if (!amapPromise) {
     amapPromise = new Promise((resolve, reject) => {
-      const s = document.createElement('script')
-      // v1.4.x 只需 key, 无需 securityJsCode
-      s.src = `https://webapi.amap.com/maps?v=1.4.17&key=${AMAP_KEY}`
-      s.onload = () => resolve(window.AMap)
-      s.onerror = () => {
-        amapPromise = null
-        reject(new Error('AMap load failed'))
+      const script = document.createElement('script')
+      // v1.4.x + 安全密钥 (_AMapSecurityConfig) 组合，2021-12-02 后申请的 key 必须配置
+      script.src = `https://webapi.amap.com/maps?v=1.4.17&key=${AMAP_KEY}`
+      script.async = true
+      
+      script.onload = () => {
+        console.log('✅ AMap script loaded successfully')
+        resolve(window.AMap)
       }
-      document.head.appendChild(s)
+      
+      script.onerror = () => {
+        console.error('❌ Failed to load AMap script from:', script.src)
+        reject(new Error('Failed to load AMap script'))
+      }
+      
+      document.head.appendChild(script)
     })
   }
   return amapPromise
@@ -43,9 +60,9 @@ export default function FleetMap({ points, satellite, hiddenPOI = true }) {
                 
         if (!mapRef.current) {
           const center = points.length > 0 ? [points[0].lng, points[0].lat] : DEFAULT_CENTER
-              
-          // 创建默认地图（普通街道图）
-          mapRef.current = new AMap.Map(containerRef.current, {
+
+          // 根据图层模式组装 layers: 卫星图不加 mapStyle (自定义样式会盖住卫星瓦片)
+          const mapOpts = {
             zoom: 13,
             center,
             resizeEnable: true,
@@ -53,33 +70,25 @@ export default function FleetMap({ points, satellite, hiddenPOI = true }) {
             dragEnable: true,             // 启用拖拽
             moveAnim: false,              // 地图平移动画关闭（提升滑动响应速度）
             zoomAnim: false,              // 缩放动画关闭（提升缩放响应速度）
-            mapStyle: 'amap://styles/grey',  // 灰色风格减少干扰
-          })
+          }
+          if (satelliteRef.current) {
+            // 卫星图: 初始化时直接携带 Satellite 图层 (v1.4 动态 addLayer 有兼容坑)
+            mapOpts.layers = [new AMap.TileLayer.Satellite()]
+          } else {
+            mapOpts.mapStyle = 'amap://styles/grey'  // 灰色风格减少干扰
+          }
+          mapRef.current = new AMap.Map(containerRef.current, mapOpts)
               
-          // 初始设置 features
+          // 初始设置 features (仅对普通底图生效; 卫星图由图层自身渲染)
           if (hiddenPOI) {
             mapRef.current.setFeatures(['bg', 'road'])  // 仅显示底图和道路
           } else {
             mapRef.current.setFeatures(['bg', 'road', 'city', 'poi'])
           }
               
-          // 注册高性能监听器（提前加载周边瓦片）
+          // 注册比例尺插件
           mapRef.current.plugin(['AMap.Scale', 'AMap.Geocoder'], () => {
-            // 地图拖动时的事件监听
-            mapRef.current.on('dragstart', function(e) {
-              // 拖动开始前，可以提前请求周边区域的瓦片
-              // 高德会自动处理预加载，但我们可以通过调整视野来提高流畅度
-            })
-              
-            mapRef.current.on('zoomend', () => {
-              // 缩放完成后立即设置合适的缩放级别范围
-              mapRef.current.setMapLevel(4) // 限制最小缩放级别，避免过度放大导致瓦片过多
-            })
-            
-            // 如果是卫星图，不设置 features（卫星图自带所有信息）
-            if (satelliteRef.current) {
-              mapRef.current.setFeatures(['bg', 'road', 'city', 'poi'])
-            }
+            // 插件就绪即可, 无需额外监听 (zoomend 里不要动 setMapLevel, 会打断用户缩放)
           })
         }
         
