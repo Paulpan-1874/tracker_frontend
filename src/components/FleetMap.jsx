@@ -131,6 +131,7 @@ export default function FleetMap({ points, satellite, hiddenPOI = true }) {
         // 增量同步标记：每个 imei 只保留最新位置
         const markers = markersRef.current
         const seen = new Set()
+        let hasNew = false // 本次是否有新设备首次出现 (决定是否调整视野)
         points.forEach((p) => {
           seen.add(p.imei)
           const pos = [p.lng, p.lat]
@@ -144,6 +145,7 @@ export default function FleetMap({ points, satellite, hiddenPOI = true }) {
             }
           } else {
             // 新定位点: 插件已加载则先建在偏南位置再 moveTo 回正, 形成"飞入"入场动画
+            hasNew = true
             const pluginReady = !!AMap.MoveAnimation
             const m = new AMap.Marker({
               map: mapRef.current,
@@ -161,14 +163,13 @@ export default function FleetMap({ points, satellite, hiddenPOI = true }) {
             delete markers[imei]
           }
         })
-        // 视野自适应：单点用适中 padding(避免过度贴近)，多点框选全部
-        // 图层切换重建时跳过 (保持用户当前视角, 不弹回设备点)
-        if (!skipFit && points.length === 1) {
-          // 单点时设置较大 padding，让地图有舒适的视角范围，不会过于贴近
-          mapRef.current.setFitView(Object.values(markers), false, [100, 100, 100, 100])
-        } else if (!skipFit && points.length > 1) {
-          // 多点时用较小 padding，保证所有设备都在视野内且显示充分
-          mapRef.current.setFitView(Object.values(markers), false, [80, 80, 80, 80])
+        // 视野策略:
+        // - 新设备定位到达 → 强制拉走视角框选全部 (定位是低频珍贵事件, 必须引起注意)
+        // - 已有设备位置更新 → 视野不动 (避免频繁上报时反复抢视角)
+        // - 图层切换重建 → 跳过 (保持切换前视角)
+        if (hasNew && !skipFit && points.length > 0) {
+          const ms = Object.values(markers)
+          mapRef.current.setFitView(ms, false, points.length === 1 ? [100, 100, 100, 100] : [80, 80, 80, 80])
         }
       })
       .catch(() => {
