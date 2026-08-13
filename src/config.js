@@ -21,8 +21,8 @@ export const broadcastTopic = (userId) => `user/${userId}/cmd_broadcast`
 // 唯一依据 device/+/status 的 retained 消息 (online/offline, 含 LWT 遗嘱)
 
 // ====== 高德地图 ======
-// Web端(JS API) key; 设备上报为 WGS-84 坐标, 高德使用 GCJ-02, 前端本地纠偏
-export const AMAP_KEY = '21393e2199d124ac360f511c3a1b5d3f'
+// Web 端 (JS API) key; 设备上报为 WGS-84 坐标，高德使用 GCJ-02, 前端本地纠偏
+export const AMAP_KEY = '151b3ed2c49abf517411b3cbaae3316b'
 
 // ====== 快捷指令 (action 字段, 与固件指令协议一致) ======
 export const COMMANDS = [

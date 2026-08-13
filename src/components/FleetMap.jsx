@@ -24,10 +24,10 @@ function loadAMap() {
 // 无定位数据时的默认视野 (首个设备的历史定位点)
 const DEFAULT_CENTER = [112.4483, 23.066]
 
-// 多设备总览地图: points = [{ imei, lat, lng }] (经纬度须已纠偏为 GCJ-02)
+// 多设备总览地图：points = [{ imei, lat, lng }] (经纬度须已纠偏为 GCJ-02)
 // 空数组时展示默认地图; 新定位到达时增量点亮对应标记并自动框选视野
-// satellite 由外部 (App) 控制, 切换按钮已移到顶部面板内
-export default function FleetMap({ points, satellite }) {
+// satellite 由外部 (App) 控制，切换按钮已移到顶部面板内
+export default function FleetMap({ points, satellite, hiddenPOI = true }) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const markersRef = useRef({}) // imei -> AMap.Marker
@@ -40,33 +40,29 @@ export default function FleetMap({ points, satellite }) {
     loadAMap()
       .then((AMap) => {
         if (cancelled || !containerRef.current) return
+                
         if (!mapRef.current) {
           const center = points.length > 0 ? [points[0].lng, points[0].lat] : DEFAULT_CENTER
+              
+          // 创建默认地图（普通街道图）
           mapRef.current = new AMap.Map(containerRef.current, {
             zoom: 13,
             center,
             resizeEnable: true,
-            // 性能优化配置
             scrollEnable: true,           // 启用滚轮缩放
             dragEnable: true,             // 启用拖拽
             moveAnim: false,              // 地图平移动画关闭（提升滑动响应速度）
             zoomAnim: false,              // 缩放动画关闭（提升缩放响应速度）
-            // 地图层级配置：卫星图不叠加路网，避免重复
-            layers: satelliteRef.current
-              ? [
-                  // 高清卫星图层：支持最大 20 级缩放（原默认只到 16-18 级）
-                  new AMap.TileLayer({
-                    zIndex: 1,
-                    minZoom: 3,
-                    maxZoom: 20,
-                    urlTemplate: 'https://webst0{1-4}.is.autonavi.com/appmaptile/satellite/zoom/{z}/x/{x}/y/{y}.png',
-                    size: [256, 256],
-                    stylePrefix: 'webst',
-                  }),
-                ]
-              : [new AMap.TileLayer()]
+            mapStyle: 'amap://styles/grey',  // 灰色风格减少干扰
           })
-            
+              
+          // 初始设置 features
+          if (hiddenPOI) {
+            mapRef.current.setFeatures(['bg', 'road'])  // 仅显示底图和道路
+          } else {
+            mapRef.current.setFeatures(['bg', 'road', 'city', 'poi'])
+          }
+              
           // 注册高性能监听器（提前加载周边瓦片）
           mapRef.current.plugin(['AMap.Scale', 'AMap.Geocoder'], () => {
             // 地图拖动时的事件监听
@@ -79,8 +75,15 @@ export default function FleetMap({ points, satellite }) {
               // 缩放完成后立即设置合适的缩放级别范围
               mapRef.current.setMapLevel(4) // 限制最小缩放级别，避免过度放大导致瓦片过多
             })
+            
+            // 如果是卫星图，不设置 features（卫星图自带所有信息）
+            if (satelliteRef.current) {
+              mapRef.current.setFeatures(['bg', 'road', 'city', 'poi'])
+            }
           })
         }
+        
+        
         // 确保 MoveAnimation 插件已加载（单独处理）
         mapRef.current.plugin(['AMap.MoveAnimation'], () => {
           // Marker 动画相关代码已经在下方执行

@@ -400,12 +400,24 @@ html, body {
   cursor: pointer;
 }
 .map-layer-btn:active { opacity: 0.7; }
-/* 全屏地图: 图层按钮脱离面板卡片, 悬浮在面板正下方靠右 (仍在 header DOM 内, 高度变化时自动跟随) */
+.map-layer-btn.active {
+  background: rgba(56, 189, 248, 0.25);
+  border-color: var(--accent);
+  color: #fff;
+}
+/* 全屏地图：地图控制按钮组悬浮在顶部面板右下角 */
+.topbar .map-controls {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  display: flex;
+  gap: 6px;
+}
+/* 单按钮样式 (旧布局使用) */
 .topbar .map-layer-btn {
   position: absolute;
-  top: 100%;
+  top: calc(100% + 8px);
   right: 0;
-  margin-top: 8px;
 }
 .map-error {
   padding: 24px 12px;
