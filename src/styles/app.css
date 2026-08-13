@@ -400,11 +400,6 @@ html, body {
   cursor: pointer;
 }
 .map-layer-btn:active { opacity: 0.7; }
-.map-layer-btn.active {
-  background: rgba(56, 189, 248, 0.25);
-  border-color: var(--accent);
-  color: #fff;
-}
 /* 全屏地图：地图控制按钮组悬浮在顶部面板右下角 */
 .topbar .map-controls {
   position: absolute;
