@@ -60,6 +60,7 @@ export default function FleetMap({ points, satellite, hiddenPOI = true }) {
   const satelliteRef = useRef(satellite) // 图层模式 (ref 供地图初始化读取)
   const hiddenPOIRef = useRef(hiddenPOI) // POI 显隐 (ref 供地图初始化读取)
   const roadNetRef = useRef(null) // 卫星模式下的路网标注图层 (RoadNet: 地名+路线合层)
+  const viewRef = useRef(null) // 图层切换重建前的视野 { center, zoom }, 重建后原样恢复
   const [loadError, setLoadError] = useState(false)
   const [layerEpoch, setLayerEpoch] = useState(0) // 图层切换时递增, 触发地图重建
 
@@ -69,12 +70,19 @@ export default function FleetMap({ points, satellite, hiddenPOI = true }) {
       .then((AMap) => {
         if (cancelled || !containerRef.current) return
                 
+        // 图层切换重建时携带原视野, 避免把用户带回默认点
+        let skipFit = false
         if (!mapRef.current) {
-          const center = points.length > 0 ? [points[0].lng, points[0].lat] : DEFAULT_CENTER
+          const restored = viewRef.current
+          viewRef.current = null
+          if (restored) skipFit = true
+          const center = restored
+            ? restored.center
+            : points.length > 0 ? [points[0].lng, points[0].lat] : DEFAULT_CENTER
 
           // 根据图层模式组装 layers: 卫星图不加 mapStyle (自定义样式会盖住卫星瓦片)
           const mapOpts = {
-            zoom: 13,
+            zoom: restored ? restored.zoom : 13,
             center,
             maxZoom: 19,                // 实测卫星瓦片真实最高 z19 (z20 是 z19 原图直返)
             resizeEnable: true,
@@ -154,10 +162,11 @@ export default function FleetMap({ points, satellite, hiddenPOI = true }) {
           }
         })
         // 视野自适应：单点用适中 padding(避免过度贴近)，多点框选全部
-        if (points.length === 1) {
+        // 图层切换重建时跳过 (保持用户当前视角, 不弹回设备点)
+        if (!skipFit && points.length === 1) {
           // 单点时设置较大 padding，让地图有舒适的视角范围，不会过于贴近
           mapRef.current.setFitView(Object.values(markers), false, [100, 100, 100, 100])
-        } else if (points.length > 1) {
+        } else if (!skipFit && points.length > 1) {
           // 多点时用较小 padding，保证所有设备都在视野内且显示充分
           mapRef.current.setFitView(Object.values(markers), false, [80, 80, 80, 80])
         }
@@ -175,6 +184,11 @@ export default function FleetMap({ points, satellite, hiddenPOI = true }) {
   useEffect(() => {
     satelliteRef.current = satellite
     if (mapRef.current) {
+      // 销毁前记住当前视野 (中心点+缩放级别), 重建后原样恢复
+      viewRef.current = {
+        center: mapRef.current.getCenter(),
+        zoom: mapRef.current.getZoom(),
+      }
       mapRef.current.destroy()
       mapRef.current = null
       markersRef.current = {}
