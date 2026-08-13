@@ -220,7 +220,7 @@ function Console({ auth, onLogout }) {
             onClick={() => setHiddenPOI(!hiddenPOI)}
             title="点击切换是否显示地名/路名/POI"
           >
-            {hiddenPOI ? '隐藏地名 ✨' : '显示地名'}
+            {hiddenPOI ? '显示地名' : '隐藏地名'}
           </button>
           <button className="map-layer-btn" onClick={() => setSatellite(!satellite)}>
             {satellite ? '普通图' : '卫星图'}
