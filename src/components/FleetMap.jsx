@@ -45,16 +45,10 @@ const DEFAULT_CENTER = [112.4483, 23.066]
 const FEATURES_HIDDEN = ['bg', 'road', 'building']              // 隐藏地名/POI 标注
 const FEATURES_SHOWN = ['bg', 'point', 'road', 'building']     // 显示全部标注
 
-// 纯标注瓦片图层: style=7 只有地名/POI 文字 (透明背景), 不带路线
-// (RoadNet 是路网+标注的合层, 会把路线一起显示出来)
-// 注意: v1.4 不认 urlTemplate (v2.0 参数), 必须用 getTileUrl 函数, 否则会回退成默认普通地图瓦片
-function createLabelLayer(AMap) {
-  return new AMap.TileLayer({
-    zIndex: 10,
-    getTileUrl: (x, y, z) =>
-      `https://webst0${(x % 4) + 1}.is.autonavi.com/appmaptile?x=${x}&y=${y}&z=${z}&style=7`,
-  })
-}
+// 卫星模式标注图层: 官方 RoadNet (路网+地名合层)
+// 说明: 纯标注方案 (style=7 瓦片 + Flexible/getTileUrl) 在 v1.4 下实测不稳定;
+// RoadNet 会连同路线一起显示, 为当前可接受的方案。
+// 实测结论 (test-labels.html 方案 D): 官方图层动态 add/remove 可用, 无需重建地图
 
 // 多设备总览地图：points = [{ imei, lat, lng }] (经纬度须已纠偏为 GCJ-02)
 // 空数组时展示默认地图; 新定位到达时增量点亮对应标记并自动框选视野
@@ -65,7 +59,7 @@ export default function FleetMap({ points, satellite, hiddenPOI = true }) {
   const markersRef = useRef({}) // imei -> AMap.Marker
   const satelliteRef = useRef(satellite) // 图层模式 (ref 供地图初始化读取)
   const hiddenPOIRef = useRef(hiddenPOI) // POI 显隐 (ref 供地图初始化读取)
-  const roadNetRef = useRef(null) // 卫星模式下的路网标注图层 (地名/路名来源)
+  const roadNetRef = useRef(null) // 卫星模式下的路网标注图层 (RoadNet: 地名+路线合层)
   const [loadError, setLoadError] = useState(false)
   const [layerEpoch, setLayerEpoch] = useState(0) // 图层切换时递增, 触发地图重建
 
@@ -91,9 +85,9 @@ export default function FleetMap({ points, satellite, hiddenPOI = true }) {
           if (satelliteRef.current) {
             // 卫星图: 初始化时直接携带 Satellite 图层 (v1.4 动态 addLayer 有兼容坑)
             mapOpts.layers = [new AMap.TileLayer.Satellite()]
-            // 未隐藏标注时叠加纯标注图层 (只有地名/POI, 不带路线)
+            // 未隐藏标注时叠加 RoadNet 官方图层 (地名/路名, 会连同路线一起显示)
             if (!hiddenPOIRef.current) {
-              mapOpts.layers.push(createLabelLayer(AMap))
+              mapOpts.layers.push(new AMap.TileLayer.RoadNet())
             }
           } else {
             mapOpts.mapStyle = 'amap://styles/grey'  // 灰色风格减少干扰
@@ -105,7 +99,7 @@ export default function FleetMap({ points, satellite, hiddenPOI = true }) {
             roadNetRef.current = mapOpts.layers[1]
           }
               
-          // 初始设置 features (仅对普通底图生效; 卫星图由标注图层控制)
+          // 初始设置 features (仅对普通底图生效; 卫星图由 RoadNet 图层控制标注)
           if (hiddenPOIRef.current) {
             mapRef.current.setFeatures(FEATURES_HIDDEN)
           } else {
@@ -187,7 +181,8 @@ export default function FleetMap({ points, satellite, hiddenPOI = true }) {
     }
   }, [satellite])
 
-  // POI 显隐切换: 普通图用 setFeatures; 卫星图用增删纯标注图层 (不含路线)
+  // POI 显隐切换: 普通图用 setFeatures 即时生效; 卫星图动态增删 RoadNet 官方图层
+  // (官方图层 add/remove 实测可用, 无需重建地图, 切换无闪烁)
   useEffect(() => {
     hiddenPOIRef.current = hiddenPOI
     if (!mapRef.current) return
@@ -197,12 +192,9 @@ export default function FleetMap({ points, satellite, hiddenPOI = true }) {
           mapRef.current.remove(roadNetRef.current)
           roadNetRef.current = null
         }
-      } else if (!roadNetRef.current) {
-        loadAMap().then((AMap) => {
-          if (!mapRef.current || roadNetRef.current) return
-          roadNetRef.current = createLabelLayer(AMap)
-          mapRef.current.add(roadNetRef.current)
-        })
+      } else if (!roadNetRef.current && window.AMap) {
+        roadNetRef.current = new window.AMap.TileLayer.RoadNet()
+        mapRef.current.add(roadNetRef.current)
       }
     } else {
       mapRef.current.setFeatures(hiddenPOI ? FEATURES_HIDDEN : FEATURES_SHOWN)
