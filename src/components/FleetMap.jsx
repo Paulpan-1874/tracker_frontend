@@ -61,6 +61,7 @@ export default function FleetMap({ points, satellite, hiddenPOI = true }) {
   const hiddenPOIRef = useRef(hiddenPOI) // POI 显隐 (ref 供地图初始化读取)
   const roadNetRef = useRef(null) // 卫星模式下的路网标注图层 (RoadNet: 地名+路线合层)
   const viewRef = useRef(null) // 图层切换重建前的视野 { center, zoom }, 重建后原样恢复
+  const positionsRef = useRef({}) // imei -> "lat,lng" 上次已拉过视角的位置快照
   const [loadError, setLoadError] = useState(false)
   const [layerEpoch, setLayerEpoch] = useState(0) // 图层切换时递增, 触发地图重建
 
@@ -131,7 +132,6 @@ export default function FleetMap({ points, satellite, hiddenPOI = true }) {
         // 增量同步标记：每个 imei 只保留最新位置
         const markers = markersRef.current
         const seen = new Set()
-        let hasNew = false // 本次是否有新设备首次出现 (决定是否调整视野)
         points.forEach((p) => {
           seen.add(p.imei)
           const pos = [p.lng, p.lat]
@@ -145,7 +145,6 @@ export default function FleetMap({ points, satellite, hiddenPOI = true }) {
             }
           } else {
             // 新定位点: 插件已加载则先建在偏南位置再 moveTo 回正, 形成"飞入"入场动画
-            hasNew = true
             const pluginReady = !!AMap.MoveAnimation
             const m = new AMap.Marker({
               map: mapRef.current,
@@ -164,12 +163,20 @@ export default function FleetMap({ points, satellite, hiddenPOI = true }) {
           }
         })
         // 视野策略:
-        // - 新设备定位到达 → 强制拉走视角框选全部 (定位是低频珍贵事件, 必须引起注意)
-        // - 已有设备位置更新 → 视野不动 (避免频繁上报时反复抢视角)
+        // - 定位数据变化 (新标记出现/已有设备位置更新) → 强制拉走视角框选全部,
+        //   定位是低频珍贵事件, 必须让用户感知到 (对比坐标快照判定, 避免无关渲染抢视角)
         // - 图层切换重建 → 跳过 (保持切换前视角)
-        if (hasNew && !skipFit && points.length > 0) {
-          const ms = Object.values(markers)
-          mapRef.current.setFitView(ms, false, points.length === 1 ? [100, 100, 100, 100] : [80, 80, 80, 80])
+        const snapshot = {}
+        let changed = Object.keys(positionsRef.current).length !== points.length
+        points.forEach((p) => {
+          const key = `${p.lat},${p.lng}`
+          snapshot[p.imei] = key
+          if (positionsRef.current[p.imei] !== key) changed = true
+        })
+        positionsRef.current = snapshot
+        if (changed && !skipFit && points.length > 0) {
+          // 统一留白 80: 单点/多点一致, 避免切换时留白忽大忽小
+          mapRef.current.setFitView(Object.values(markers), false, [80, 80, 80, 80])
         }
       })
       .catch(() => {
