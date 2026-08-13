@@ -76,6 +76,7 @@ export default function FleetMap({ points, satellite, hiddenPOI = true }) {
           const mapOpts = {
             zoom: 13,
             center,
+            maxZoom: 19,                // 实测卫星瓦片真实最高 z19 (z20 是 z19 原图直返)
             resizeEnable: true,
             scrollEnable: true,           // 启用滚轮缩放
             dragEnable: true,             // 启用拖拽

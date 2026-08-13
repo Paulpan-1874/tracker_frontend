@@ -47,6 +47,7 @@ export default function MapView({ lat, lng, title = '设备位置', zoom = 16 })
           mapRef.current = new AMap.Map(containerRef.current, {
             zoom,
             center: [lng, lat],
+            maxZoom: 19, // 实测卫星瓦片真实最高 z19
             resizeEnable: true,
             // 初始化时直接指定图层组合: 卫星模式下叠加路网保证路名可见
             layers: satelliteRef.current
