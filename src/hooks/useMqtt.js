@@ -13,14 +13,10 @@ export function useMqtt(userId) {
 
   // 建立 MQTT 连接并订阅上报主题
   useEffect(() => {
-    // 消息看门狗：30 秒无任何消息到达 → 判定 WS 死连接，主动断开重连
-    let lastMsgTime = 0
-    let watchdog = null
-
     const client = mqtt.connect(MQTT_URL, {
       clientId: 'web_console_' + Math.random().toString(16).slice(2, 10),
       clean: true,
-      keepalive: 15,
+      keepalive: 15,            // 15秒心跳 → PINGREQ ~11秒, 协议层检测连接存活
       reconnectPeriod: 3000,
       connectTimeout: 8000
     })
@@ -29,23 +25,12 @@ export function useMqtt(userId) {
     client.on('connect', () => {
       console.log('[MQTT] 前端已连接 Broker')
       setStatus('connected')
-      lastMsgTime = Date.now()
       const topics = [DATA_TOPIC, STATUS_TOPIC, LOCATION_TOPIC]
       if (userId) topics.push(broadcastTopic(userId))
       client.subscribe(topics, { qos: 0 }, (err) => {
         if (err) console.error('[MQTT] 订阅失败:', err)
         else console.log('[MQTT] 已订阅:', topics.join(', '))
       })
-      // 启动看门狗
-      if (watchdog) clearInterval(watchdog)
-      watchdog = setInterval(() => {
-        if (!client.connected) return
-        const idle = Date.now() - lastMsgTime
-        if (idle > 30000) {
-          console.warn(`[MQTT] 看门狗: ${Math.round(idle / 1000)}s 无消息, 强制重连`)
-          client.end(true)   // 强制关闭, 触发 reconnectPeriod 自动重连
-        }
-      }, 10000)
     })
     client.on('reconnect', () => {
       console.warn('[MQTT] 正在重连...')
@@ -64,8 +49,6 @@ export function useMqtt(userId) {
     })
 
     client.on('message', (topic, payload) => {
-      lastMsgTime = Date.now()  // 看门狗续期
-
       // 广播主题: retained 消息订阅后立即送达, 以此同步按钮真实状态
       if (userId && topic === broadcastTopic(userId)) {
         const text = payload.toString()
@@ -107,6 +90,7 @@ export function useMqtt(userId) {
         // 上线及后续上报都不覆盖, 避免 retained 重发把时间重置成"刚刚"
         if (kind === 'status') {
           const offline = data.event === 'offline'
+          console.log(`[MQTT] status: ${imei} event=${data.event} → online=${!offline}`)
           return {
             ...prev,
             [imei]: {
@@ -156,7 +140,6 @@ export function useMqtt(userId) {
     })
 
     return () => {
-      if (watchdog) clearInterval(watchdog)
       client.end(true)
       clientRef.current = null
     }
