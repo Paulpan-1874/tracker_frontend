@@ -50,6 +50,11 @@ const FEATURES_SHOWN = ['bg', 'point', 'road', 'building']     // 显示全部�
 // RoadNet 会连同路线一起显示, 为当前可接受的方案。
 // 实测结论 (test-labels.html 方案 D): 官方图层动态 add/remove 可用, 无需重建地图
 
+// 坐标安全校验：拦截 NaN/Infinity/undefined，避免 AMap LngLat(NaN, NaN) 崩溃
+function validCoord(lat, lng) {
+  return Number.isFinite(lat) && Number.isFinite(lng)
+}
+
 // 多设备总览地图：points = [{ imei, lat, lng }] (经纬度须已纠偏为 GCJ-02)
 // 空数组时展示默认地图; 新定位到达时增量点亮对应标记并自动框选视野
 // satellite 由外部 (App) 控制，切换按钮已移到顶部面板内
@@ -124,36 +129,29 @@ export default function FleetMap({ points, satellite, hiddenPOI = true }) {
         }
         
         
-        // 确保 MoveAnimation 插件已加载（单独处理）
-        mapRef.current.plugin(['AMap.MoveAnimation'], () => {
-          // Marker 动画相关代码已经在下方执行
-        })
-        
         // 增量同步标记：每个 imei 只保留最新位置
         const markers = markersRef.current
         const seen = new Set()
         let hasNewMarker = false // 本次是否有新标记诞生 (决定视野调整方式)
         points.forEach((p) => {
+          if (!validCoord(p.lat, p.lng)) {
+            console.warn('[FleetMap] 跳过无效坐标:', p.imei, p.lat, p.lng)
+            return
+          }
           seen.add(p.imei)
           const pos = [p.lng, p.lat]
           const marker = markers[p.imei]
           if (marker) {
-            // 位置更新: 有动画插件则平滑移动, 否则直接跳转
-            if (marker.moveTo) {
-              marker.moveTo(pos, { duration: 500 })
-            } else {
-              marker.setPosition(pos)
-            }
+            // 位置更新: setPosition 即时跳转 (moveTo 动画在 v1.4 下会产生 NaN 错误)
+            marker.setPosition(pos)
           } else {
-            // 新定位点: 插件已加载则先建在偏南位置再 moveTo 回正, 形成"飞入"入场动画
+            // 新定位点: 直接创建在正确位置
             hasNewMarker = true
-            const pluginReady = !!AMap.MoveAnimation
             const m = new AMap.Marker({
               map: mapRef.current,
-              position: pluginReady ? [pos[0], pos[1] - 0.008] : pos,
+              position: pos,
               title: `设备 ${p.imei}`
             })
-            if (pluginReady) m.moveTo(pos, { duration: 600 })
             markers[p.imei] = m
           }
         })

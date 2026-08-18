@@ -28,6 +28,11 @@ function loadAMap() {
   return amapPromise
 }
 
+// 坐标安全校验
+function validCoord(lat, lng) {
+  return Number.isFinite(lat) && Number.isFinite(lng)
+}
+
 // 高德地图: 展示设备最新定位 (传入的经纬度须已纠偏为 GCJ-02)
 export default function MapView({ lat, lng, title = '设备位置', zoom = 16 }) {
   const containerRef = useRef(null)
@@ -43,6 +48,10 @@ export default function MapView({ lat, lng, title = '设备位置', zoom = 16 })
     loadAMap()
       .then((AMap) => {
         if (cancelled || !containerRef.current) return
+        if (!validCoord(lat, lng)) {
+          console.warn('[MapView] 无效坐标, 跳过:', lat, lng)
+          return
+        }
         if (!mapRef.current) {
           mapRef.current = new AMap.Map(containerRef.current, {
             zoom,
