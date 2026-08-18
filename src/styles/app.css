@@ -626,14 +626,49 @@ html, body {
 /* 满宽广播按钮 (配合 .bottom 用作页面底部悬浮操作栏) */
 .broadcast-btn.full { width: 100%; }
 
-/* 页面底部悬浮操作栏: 一键定位按钮独立于顶部面板, 随时可触达 */
-.broadcast-btn.bottom {
+/* 页面底部悬浮操作栏: 模式选择 + 一键定位按钮 */
+.bottom-bar {
   position: absolute;
   left: 10px;
   right: 10px;
   bottom: calc(10px + env(safe-area-inset-bottom));
-  z-index: 285; /* 压在详情抽屉 (290) 之下, 详情展开时自动让位 */
-  width: auto;
+  z-index: 285;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+/* 模式选择器: 单次/持续 切换按钮组 */
+.mode-selector {
+  display: flex;
+  gap: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(6px);
+}
+.mode-btn {
+  flex: 1;
+  padding: 6px 0;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.mode-btn.active {
+  background: var(--accent);
+  color: #04263a;
+  font-weight: 700;
+}
+.mode-btn:active { opacity: 0.7; }
+
+/* 页面底部悬浮操作栏: 一键定位按钮独立于顶部面板, 随时可触达 */
+.broadcast-btn.bottom {
+  z-index: 285;
+  width: 100%;
   box-shadow: 0 4px 16px rgba(2, 6, 23, 0.45);
 }
 

@@ -14,6 +14,7 @@ function Console({ auth, onLogout }) {
   const [drawerOpen, setDrawerOpen] = useState(false) // 面板底部抓手展开的设备抽屉
   const [satellite, setSatellite] = useState(true) // 总览地图图层模式 (按钮在顶部面板内), 默认开启卫星图
   const [hiddenPOI, setHiddenPOI] = useState(true) // 隐藏地名和 POI 标注
+  const [gpsMode, setGpsMode] = useState('once') // 广播定位模式: once | continuous
   const swipeY = useRef(null) // 抽屉手势: 记录起始触点, 下滑展开/上滑收起
   const justSwiped = useRef(false) // 手势触发后吞掉随后的 click, 避免抽屉被立刻弹回
   const [ownedImeis, setOwnedImeis] = useState(null) // null=加载中, []=无设备
@@ -75,12 +76,17 @@ function Console({ auth, onLogout }) {
     })
     .filter(Boolean)
 
-  // 一键定位开关: 点亮=下发 retained 广播; 再点=撤回广播并清空名下所有设备的 retained 位置
+  // 一键定位开关:
+  //   点亮 = 下发 retained 广播 (根据 gpsMode 携带 params);
+  //   再点 = 下发 gps_stop 广播停止设备 + 撤回广播并清空位置
   const toggleBroadcast = () => {
     if (broadcastActive) {
+      // 先下发 gps_stop 广播停止所有设备的 GPS, 再清除 retained 数据
+      sendBroadcast(auth.user.id, 'gps_stop')
       clearBroadcast(auth.user.id, ownedImeis || [])
     } else {
-      sendBroadcast(auth.user.id, 'gps_start')
+      const params = gpsMode === 'continuous' ? { type: 'continuous' } : undefined
+      sendBroadcast(auth.user.id, 'gps_start', params)
     }
   }
 
@@ -232,21 +238,39 @@ function Console({ auth, onLogout }) {
         </div>
       </header>
 
-      {/* 页面底部悬浮操作栏: 一键定位按钮 (独立于顶部面板, 随时可触达) */}
-      <button
-        className={`broadcast-btn full bottom ${broadcastActive ? 'lit' : ''}`}
-        onClick={toggleBroadcast}
-        disabled={status !== 'connected'}
-      >
-        {broadcastActive ? (
-          <>
-            等待设备上线，再次点击可取消
-            <span className="btn-spinner" />
-          </>
-        ) : (
-          '开始定位'
+      {/* 页面底部悬浮操作栏: 模式选择 + 一键定位按钮 (独立于顶部面板, 随时可触达) */}
+      <div className="bottom-bar">
+        {!broadcastActive && (
+          <div className="mode-selector">
+            <button
+              className={`mode-btn ${gpsMode === 'once' ? 'active' : ''}`}
+              onClick={() => setGpsMode('once')}
+            >
+              单次
+            </button>
+            <button
+              className={`mode-btn ${gpsMode === 'continuous' ? 'active' : ''}`}
+              onClick={() => setGpsMode('continuous')}
+            >
+              持续
+            </button>
+          </div>
         )}
-      </button>
+        <button
+          className={`broadcast-btn full bottom ${broadcastActive ? 'lit' : ''}`}
+          onClick={toggleBroadcast}
+          disabled={status !== 'connected'}
+        >
+          {broadcastActive ? (
+            <>
+              等待设备上线，再次点击可停止
+              <span className="btn-spinner" />
+            </>
+          ) : (
+            `开始定位${gpsMode === 'continuous' ? '（持续）' : ''}`
+          )}
+        </button>
+      </div>
 
       {/* 设备详情: 沿用左侧悬浮抽屉, 返回后重新展开设备抽屉 */}
       {current && (

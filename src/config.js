@@ -28,5 +28,6 @@ export const AMAP_KEY = '151b3ed2c49abf517411b3cbaae3316b'
 export const COMMANDS = [
   { action: 'status', label: '查询状态' },
   { action: 'gps_start', label: 'GPS 定位' },
+  { action: 'gps_stop', label: '停止定位' },
   { action: 'reboot', label: '重启设备' }
 ]
