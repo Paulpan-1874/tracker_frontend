@@ -14,14 +14,17 @@ function Console({ auth, onLogout }) {
   const [drawerOpen, setDrawerOpen] = useState(false) // 面板底部抓手展开的设备抽屉
   const [satellite, setSatellite] = useState(true) // 总览地图图层模式 (按钮在顶部面板内), 默认开启卫星图
   const [hiddenPOI, setHiddenPOI] = useState(true) // 隐藏地名和 POI 标注
-  const [gpsMode, setGpsMode] = useState('once') // 广播定位模式: once | continuous
   const swipeY = useRef(null) // 抽屉手势: 记录起始触点, 下滑展开/上滑收起
   const justSwiped = useRef(false) // 手势触发后吞掉随后的 click, 避免抽屉被立刻弹回
   const [ownedImeis, setOwnedImeis] = useState(null) // null=加载中, []=无设备
   const [loadError, setLoadError] = useState('')
 
   // 广播按钮状态 = Broker retained 实况 (broadcast 由订阅同步), 不存在假广播
+  // broadcastMode: 当前生效的广播模式 (once | continuous), 从 retained 消息反推
   const broadcastActive = !!(broadcast && broadcast.action)
+  const broadcastMode = broadcastActive
+    ? (broadcast.params && broadcast.params.type === 'continuous' ? 'continuous' : 'once')
+    : null
 
   // 按用户 id 拉取名下设备
   useEffect(() => {
@@ -72,16 +75,22 @@ function Console({ auth, onLogout }) {
     })
     .filter(Boolean)
 
-  // 一键定位开关:
-  //   点亮 = 下发 retained 广播 (根据 gpsMode 携带 params);
-  //   再点 = 下发 gps_stop 广播停止设备 + 撤回广播并清空位置
-  const toggleBroadcast = () => {
-    if (broadcastActive) {
-      // 先下发 gps_stop 广播停止所有设备的 GPS, 再清除 retained 数据
+  // 定位广播开关: 点击对应模式按钮触发
+  //   未广播 → 下发该模式的 retained 广播
+  //   已广播且模式相同 → 停止广播 (gps_stop + 清除 retained)
+  //   已广播但模式不同 → 先停止, 再下发新模式广播 (切换)
+  const toggleBroadcast = (mode) => {
+    const isSameMode = broadcastActive && broadcastMode === mode
+    if (isSameMode) {
       sendBroadcast(auth.user.id, 'gps_stop')
       clearBroadcast(auth.user.id, ownedImeis || [])
     } else {
-      const params = gpsMode === 'continuous' ? { type: 'continuous' } : undefined
+      if (broadcastActive) {
+        // 先停止旧广播再发新广播
+        sendBroadcast(auth.user.id, 'gps_stop')
+        clearBroadcast(auth.user.id, ownedImeis || [])
+      }
+      const params = mode === 'continuous' ? { type: 'continuous' } : undefined
       sendBroadcast(auth.user.id, 'gps_start', params)
     }
   }
@@ -219,8 +228,22 @@ function Console({ auth, onLogout }) {
             </button>
           </>
         )}
-        {/* 图层切换：脱离面板卡片，悬浮在顶部面板右下角 */}
+        {/* 图层切换 + 定位模式按钮: 并排悬浮在顶部面板右下角 */}
         <div className="map-controls">
+          <button
+            className={`map-layer-btn loc-btn ${broadcastMode === 'once' ? 'loc-btn-lit' : ''}`}
+            onClick={() => toggleBroadcast('once')}
+            disabled={status !== 'connected'}
+          >
+            单次定位
+          </button>
+          <button
+            className={`map-layer-btn loc-btn ${broadcastMode === 'continuous' ? 'loc-btn-lit' : ''}`}
+            onClick={() => toggleBroadcast('continuous')}
+            disabled={status !== 'connected'}
+          >
+            持续定位
+          </button>
           <button 
             className={`map-layer-btn ${hiddenPOI ? 'active' : ''}`}
             onClick={() => setHiddenPOI(!hiddenPOI)}
@@ -234,39 +257,7 @@ function Console({ auth, onLogout }) {
         </div>
       </header>
 
-      {/* 页面底部悬浮操作栏: 模式选择 + 一键定位按钮 (独立于顶部面板, 随时可触达) */}
-      <div className="bottom-bar">
-        {!broadcastActive && (
-          <div className="mode-selector">
-            <button
-              className={`mode-btn ${gpsMode === 'once' ? 'active' : ''}`}
-              onClick={() => setGpsMode('once')}
-            >
-              单次
-            </button>
-            <button
-              className={`mode-btn ${gpsMode === 'continuous' ? 'active' : ''}`}
-              onClick={() => setGpsMode('continuous')}
-            >
-              持续
-            </button>
-          </div>
-        )}
-        <button
-          className={`broadcast-btn full bottom ${broadcastActive ? 'lit' : ''}`}
-          onClick={toggleBroadcast}
-          disabled={status !== 'connected'}
-        >
-          {broadcastActive ? (
-            <>
-              等待设备上线，再次点击可停止
-              <span className="btn-spinner" />
-            </>
-          ) : (
-            `开始定位${gpsMode === 'continuous' ? '（持续）' : ''}`
-          )}
-        </button>
-      </div>
+      {/* bottom-bar 已移除: 定位模式按钮并入顶部 map-controls */}
 
       {/* 设备详情: 沿用左侧悬浮抽屉, 返回后重新展开设备抽屉 */}
       {current && (
