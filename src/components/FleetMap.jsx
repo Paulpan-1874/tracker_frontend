@@ -176,7 +176,7 @@ export default function FleetMap({ points, satellite, hiddenPOI = true, labelMod
             scrollEnable: true,           // 启用滚轮缩放
             dragEnable: true,             // 启用拖拽
             moveAnim: false,              // 地图平移动画关闭（提升滑动响应速度）
-            zoomAnim: false,              // 缩放动画关闭（提升缩放响应速度）
+            zoomAnim: true,               // 缩放开启动画（双击时平滑过渡）
           }
           if (satelliteRef.current) {
             // 卫星图: 初始化时直接携带 Satellite 图层 (v1.4 动态 addLayer 有兼容坑)
