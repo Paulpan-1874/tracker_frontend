@@ -113,7 +113,7 @@ function updateMarkerLabel(marker, p, labelMode) {
   // 设置标签到 marker 上方
   marker.setLabel({
     offset: new AMap.Pixel(0, -18),
-    content: `<div style="position: absolute; left: 50%; transform: translateX(-50%); top: 3px; background: rgba(15, 23, 42, 0.95); color: #fff; border-radius: 4px; padding: 2px 8px; white-space: nowrap; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4); font-size: 10px;">${content}</div>`,
+    content: `<div style="position: absolute; left: 50%; transform: translateX(-50%); top: 3px; background: #fff; color: #0f172a; border-radius: 4px; padding: 2px 6px; white-space: nowrap; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15); font-size: 9px; font-weight: 500;">${content}</div>`,
     direction: 'top'
   })
 }
