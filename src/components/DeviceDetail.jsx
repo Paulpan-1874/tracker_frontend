@@ -108,6 +108,7 @@ export default function DeviceDetail({ device, onBack, sendCommand }) {
           <Row k="卫星数" v={gps.sats} />
           <Row k="定位用时" v={gps.duration != null ? `${gps.duration} 秒` : undefined} />
           <Row k="搜星轮次" v={rounds} />
+          <Row k="最后定位" v={gps.last_fix ? formatLastSeen(Date.parse(gps.last_fix)) : undefined} />
           <div className="map-link-row">
             <a
               className="map-link"
