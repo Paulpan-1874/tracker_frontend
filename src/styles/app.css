@@ -422,8 +422,17 @@ html, body {
   display: flex;
   gap: 6px;
 }
+/* 第二行定位按钮：在第一行下方独立一行 */
+.topbar .map-controls-2nd {
+  position: absolute;
+  top: calc(100% + 40px); /* 第一行下方间隔 */
+  right: 0;
+  display: flex;
+  gap: 6px;
+}
 /* 按钮组内的按钮跟随 flex 布局，覆盖基础类的绝对定位 (否则会重叠) */
-.topbar .map-controls .map-layer-btn {
+.topbar .map-controls .map-layer-btn,
+.topbar .map-controls-2nd .map-layer-btn {
   position: static;
   top: auto;
   right: auto;

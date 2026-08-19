@@ -22,6 +22,17 @@ function loadAMap() {
       script.src = `https://webapi.amap.com/maps?v=1.4.17&key=${AMAP_KEY}`
       script.async = true
       
+      // 在脚本加载前注入自定义样式，清除 label 的白色背景和边框
+      const style = document.createElement('style')
+      style.textContent = `
+        .amap-marker-label {
+          background: transparent !important;
+          border: none !important;
+          box-shadow: none !important;
+        }
+      `
+      document.head.appendChild(style)
+      
       script.onload = () => {
         console.log('✅ AMap script loaded successfully')
         resolve(window.AMap)
@@ -80,41 +91,46 @@ function formatFixTime(t) {
 }
 
 // 更新 marker 的文字标签内容
-function updateMarkerLabel(marker, p, showLabels) {
-  if (!marker.setLabel) return
-  
-  if (showLabels) {
-    const label = p.name || p.imei
-    const time = formatFixTime(p.lastFix)
-    const content = time ? `${label} • ${time}` : label
-    
-    // 设置标签到 marker 上方
-    marker.setLabel({
-      offset: new AMap.Pixel(0, -35),
-      content: `<div style="position: absolute; left: 50%; transform: translateX(-50%); top: 3px; background: rgba(15, 23, 42, 0.95); color: #fff; border-radius: 4px; padding: 2px 8px; white-space: nowrap; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4); font-size: 10px;">${content}</div>`,
-      direction: 'top'
-    })
-  } else {
-    // 清除标签 - 使用空对象确保完全移除（兼容不同浏览器）
+function updateMarkerLabel(marker, p, labelMode) {
+  // labelMode === 0 时关闭标签
+  if (labelMode === 0) {
     marker.setLabel({})
+    return
   }
+  
+  // labelMode !== 0 时显示标签
+  const label = p.name || p.imei
+  let content = label
+  
+  // labelMode === 2 时添加时间
+  if (labelMode === 2) {
+    const time = formatFixTime(p.lastFix)
+    if (time) {
+      content = `${label} • ${time}`
+    }
+  }
+  
+  // 设置标签到 marker 上方
+  marker.setLabel({
+    offset: new AMap.Pixel(0, -18),
+    content: `<div style="position: absolute; left: 50%; transform: translateX(-50%); top: 3px; background: rgba(15, 23, 42, 0.95); color: #fff; border-radius: 4px; padding: 2px 8px; white-space: nowrap; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4); font-size: 10px;">${content}</div>`,
+    direction: 'top'
+  })
 }
 
-// 获取当前 showLabels 值
-function getShowLabels() {
-  return showLabelsRef ? showLabelsRef.current : true
-}
+// 删除旧的 getShowLabels 函数
+
 
 // 多设备总览地图：points = [{ imei, lat, lng }] (经纬度须已纠偏为 GCJ-02)
 // 空数组时展示默认地图; 新定位到达时增量点亮对应标记并自动框选视野
 // satellite 由外部 (App) 控制，切换按钮已移到顶部面板内
-export default function FleetMap({ points, satellite, hiddenPOI = true, showLabels = true }) {
+export default function FleetMap({ points, satellite, hiddenPOI = true, labelMode = 0 }) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const markersRef = useRef({}) // imei -> AMap.Marker
   const satelliteRef = useRef(satellite) // 图层模式 (ref 供地图初始化读取)
   const hiddenPOIRef = useRef(hiddenPOI) // POI 显隐 (ref 供地图初始化读取)
-  const showLabelsRef = useRef(showLabels) // 显示标签开关 (ref 避免频繁重绘)
+  const labelModeRef = useRef(labelMode) // 标签显示模式：0=关闭，1=只显示名字，2=显示名字 + 时间
   const roadNetRef = useRef(null) // 卫星模式下的路网标注图层 (RoadNet: 地名 + 路线合层)
   const viewRef = useRef(null) // 图层切换重建前的视野 { center, zoom }, 重建后原样恢复
   const positionsRef = useRef({}) // imei -> "lat,lng" 上次已拉过视角的位置快照
@@ -122,18 +138,18 @@ export default function FleetMap({ points, satellite, hiddenPOI = true, showLabe
   const [layerEpoch, setLayerEpoch] = useState(0) // 图层切换时递增，触发地图重建
   const timeUpdateIntervalRef = useRef(null) // 定时更新时间显示
 
-  // 跟踪 showLabels 变化（不触发重绘）
+  // 跟踪 labelMode 变化（不触发重绘）
   useEffect(() => {
-    showLabelsRef.current = showLabels
+    labelModeRef.current = labelMode
     // 立即刷新所有现有 marker 的标签状态
     const markers = markersRef.current
     for (const imei in markers) {
       const p = points.find(point => point.imei === imei)
       if (p) {
-        updateMarkerLabel(markers[imei], p, showLabels)
+        updateMarkerLabel(markers[imei], p, labelMode)
       }
     }
-  }, [showLabels])
+  }, [labelMode])
 
   useEffect(() => {
     let cancelled = false
@@ -210,12 +226,13 @@ export default function FleetMap({ points, satellite, hiddenPOI = true, showLabe
           if (marker) {
             // 位置更新：setPosition 即时跳转 (moveTo 动画在 v1.4 下会产生 NaN 错误)
             marker.setPosition(pos)
-            updateMarkerLabel(marker, p, showLabelsRef.current)
+            updateMarkerLabel(marker, p, labelModeRef.current)
           } else {
             // 新定位点：直接创建在正确位置
             hasNewMarker = true
-            const showLabelsValue = showLabelsRef.current
-            const title = showLabelsValue ? `${p.name || p.imei}${formatFixTime(p.lastFix) ? ' | ' + formatFixTime(p.lastFix) : ''}` : p.imei
+            const labelModeValue = labelModeRef.current
+            // 注意：title 只用于鼠标悬停显示，与 label 无关
+            const title = `${p.name || p.imei} ${formatFixTime(p.lastFix) ? ' • ' + formatFixTime(p.lastFix) : ''}`
             const m = new AMap.Marker({
               map: mapRef.current,
               position: pos,
@@ -339,7 +356,7 @@ export default function FleetMap({ points, satellite, hiddenPOI = true, showLabe
     for (const imei in markers) {
       const p = points.find(point => point.imei === imei)
       if (p) {
-        updateMarkerLabel(markers[imei], p, showLabelsRef.current)
+        updateMarkerLabel(markers[imei], p, labelModeRef.current)
       }
     }
     
@@ -349,7 +366,7 @@ export default function FleetMap({ points, satellite, hiddenPOI = true, showLabe
       for (const imei in currentMarkers) {
         const p = points.find(point => point.imei === imei)
         if (p) {
-          updateMarkerLabel(currentMarkers[imei], p, showLabelsRef.current)
+          updateMarkerLabel(currentMarkers[imei], p, labelModeRef.current)
         }
       }
     }, 1000)

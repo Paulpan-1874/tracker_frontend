@@ -13,7 +13,7 @@ function Console({ auth, onLogout }) {
   const [selected, setSelected] = useState(null)
   const [drawerOpen, setDrawerOpen] = useState(false) // 面板底部抓手展开的设备抽屉
   const [satellite, setSatellite] = useState(true) // 总览地图图层模式 (按钮在顶部面板内), 默认开启卫星图
-  const [hiddenLabels, setHiddenLabels] = useState(false) // 隐藏标签文字
+  const [labelMode, setLabelMode] = useState(0) // 标签显示模式：0=关闭，1=只显示名字，2=显示名字 + 时间
   const [hiddenPOI, setHiddenPOI] = useState(true) // 隐藏地名和 POI 标注
   const swipeY = useRef(null) // 抽屉手势: 记录起始触点, 下滑展开/上滑收起
   const justSwiped = useRef(false) // 手势触发后吞掉随后的 click, 避免抽屉被立刻弹回
@@ -112,7 +112,7 @@ function Console({ auth, onLogout }) {
     // 全屏布局: 地图铺满整个视口, 操作面板/详情页作为左侧悬浮抽屉
     <div className="app app-full">
       <div className="map-area">
-        <FleetMap points={gpsPoints} satellite={satellite} hiddenPOI={hiddenPOI} showLabels={!hiddenLabels} />
+        <FleetMap points={gpsPoints} satellite={satellite} hiddenPOI={hiddenPOI} labelMode={labelMode} />
       </div>
 
       {/* 浮动控制面板: 菜单行 + 定位状态灯阵 (3行×30列) + 底部抽屏抓手 */}
@@ -241,8 +241,30 @@ function Console({ auth, onLogout }) {
             </button>
           </>
         )}
-        {/* 图层切换 + 定位模式按钮: 并排悬浮在顶部面板右下角 */}
+        {/* 图层切换 + 定位模式按钮：第一行显示 POI、地图类型和标签模式 */}
         <div className="map-controls">
+          <button 
+            className={`map-layer-btn ${hiddenPOI ? 'active' : ''}`}
+            onClick={() => setHiddenPOI(!hiddenPOI)}
+            title="点击切换是否显示地名/路名/POI"
+          >
+            {hiddenPOI ? '显示地名' : '隐藏地名'}
+          </button>
+          <button className="map-layer-btn" onClick={() => setSatellite(!satellite)}>
+            {satellite ? '普通图' : '卫星图'}
+          </button>
+          <button
+            className="map-layer-btn"
+            onClick={() => setLabelMode((mode) => (mode + 1) % 3)}
+            title="点击切换标签显示模式：关闭 → 只显示名字 → 名字 + 时间"
+          >
+            {labelMode === 0 && '显示名字'}
+            {labelMode === 1 && '显示时间'}
+            {labelMode === 2 && '关闭标签'}
+          </button>
+        </div>
+        {/* 定位模式按钮：第二行独立显示 */}
+        <div className="map-controls map-controls-2nd">
           <button
             className={`map-layer-btn loc-btn ${broadcastMode === 'once' ? 'loc-btn-lit' : ''}`}
             onClick={() => toggleBroadcast('once')}
@@ -256,23 +278,6 @@ function Console({ auth, onLogout }) {
             disabled={status !== 'connected'}
           >
             持续定位
-          </button>
-          <button 
-            className={`map-layer-btn ${hiddenPOI ? 'active' : ''}`}
-            onClick={() => setHiddenPOI(!hiddenPOI)}
-            title="点击切换是否显示地名/路名/POI"
-          >
-            {hiddenPOI ? '显示地名' : '隐藏地名'}
-          </button>
-          <button className="map-layer-btn" onClick={() => setSatellite(!satellite)}>
-            {satellite ? '普通图' : '卫星图'}
-          </button>
-          <button 
-            className={`map-layer-btn ${hiddenLabels ? '' : 'active'}`}
-            onClick={() => setHiddenLabels(!hiddenLabels)}
-            title="点击切换显示/隐藏标签文字"
-          >
-            {hiddenLabels ? '显示名字' : '隐藏名字'}
           </button>
         </div>
       </header>
