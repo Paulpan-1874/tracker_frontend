@@ -79,7 +79,8 @@ html, body {
   margin: 0 0 14px;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  grid-template-columns: repeat(auto-fill, 110px);
+  justify-content: center;
   gap: 4px;
 }
 .device-tile {
@@ -743,11 +744,11 @@ html, body {
 .device-drawer {
   width: 100%;
   max-height: 264px;
-  overflow-y: auto;
+  overflow: auto;
   overscroll-behavior: contain; /* 抽屉滚到头后不把滑动传递给外层页面 */
 }
 .device-drawer .device-grid {
-  grid-template-columns: repeat(4, minmax(60px, 140px));
+  grid-template-columns: repeat(4, 110px);
   justify-content: space-between;
   margin: 0;
 }
