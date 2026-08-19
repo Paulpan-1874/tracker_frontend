@@ -55,14 +55,28 @@ function validCoord(lat, lng) {
   return Number.isFinite(lat) && Number.isFinite(lng)
 }
 
-// 格式化定位时间为简短显示 (HH:MM)
+// 格式化定位时间为简短显示 (相对于当前时间)
 function formatFixTime(t) {
   if (!t) return ''
   const d = new Date(t)
   if (isNaN(d.getTime())) return ''
-  const hh = String(d.getHours()).padStart(2, '0')
-  const mm = String(d.getMinutes()).padStart(2, '0')
-  return `${hh}:${mm}`
+  
+  const now = new Date()
+  const diffMs = now - d
+  const diffSecs = Math.floor(diffMs / 1000)
+  const diffMins = Math.floor(diffSecs / 60)
+  const diffHours = Math.floor(diffMins / 60)
+  
+  // 30 秒内显示秒，否则根据时长选择单位
+  if (diffHours < 1) {
+    if (diffMins < 1) {
+      return `${diffSecs}s`
+    } else {
+      return `${diffMins}m`
+    }
+  } else {
+    return `${diffHours}h`
+  }
 }
 
 // 更新 marker 的文字标签内容
@@ -72,7 +86,7 @@ function updateMarkerLabel(marker, p, showLabels) {
   if (showLabels) {
     const label = p.name || p.imei
     const time = formatFixTime(p.lastFix)
-    const content = `${label}${time ? ' | ' + time : ''}`
+    const content = time ? `${label} • ${time}` : label
     
     // 设置标签到 marker 上方
     marker.setLabel({
@@ -106,6 +120,7 @@ export default function FleetMap({ points, satellite, hiddenPOI = true, showLabe
   const positionsRef = useRef({}) // imei -> "lat,lng" 上次已拉过视角的位置快照
   const [loadError, setLoadError] = useState(false)
   const [layerEpoch, setLayerEpoch] = useState(0) // 图层切换时递增，触发地图重建
+  const timeUpdateIntervalRef = useRef(null) // 定时更新时间显示
 
   // 跟踪 showLabels 变化（不触发重绘）
   useEffect(() => {
@@ -293,7 +308,7 @@ export default function FleetMap({ points, satellite, hiddenPOI = true, showLabe
     }
   }, [hiddenPOI])
 
-  // 组件卸载时销毁地图实例
+  // 组件卸载时销毁地图实例和清除定时器
   useEffect(() => {
     return () => {
       if (mapRef.current) {
@@ -302,8 +317,50 @@ export default function FleetMap({ points, satellite, hiddenPOI = true, showLabe
         markersRef.current = {}
         roadNetRef.current = null
       }
+      // 清除定时器
+      if (timeUpdateIntervalRef.current) {
+        clearInterval(timeUpdateIntervalRef.current)
+        timeUpdateIntervalRef.current = null
+      }
     }
   }, [])
+
+  // 每秒更新时间显示（每 1000ms）
+  useEffect(() => {
+    if (!mapRef.current || points.length === 0) return
+    
+    // 清除旧的定时器（如果存在）
+    if (timeUpdateIntervalRef.current) {
+      clearInterval(timeUpdateIntervalRef.current)
+    }
+    
+    // 立即执行一次
+    const markers = markersRef.current
+    for (const imei in markers) {
+      const p = points.find(point => point.imei === imei)
+      if (p) {
+        updateMarkerLabel(markers[imei], p, showLabelsRef.current)
+      }
+    }
+    
+    // 设置定时器每秒刷新
+    timeUpdateIntervalRef.current = setInterval(() => {
+      const currentMarkers = markersRef.current
+      for (const imei in currentMarkers) {
+        const p = points.find(point => point.imei === imei)
+        if (p) {
+          updateMarkerLabel(currentMarkers[imei], p, showLabelsRef.current)
+        }
+      }
+    }, 1000)
+    
+    return () => {
+      if (timeUpdateIntervalRef.current) {
+        clearInterval(timeUpdateIntervalRef.current)
+        timeUpdateIntervalRef.current = null
+      }
+    }
+  }, [points])
 
   if (loadError) {
     return <div className="map-error">地图加载失败，请检查网络或 key 配置</div>
