@@ -40,7 +40,7 @@ export async function login(identity, password) {
   return { token: data.token, user }
 }
 
-// 拉取当前用户名下的设备 IMEI 列表 (devices 集合, 按 owner 过滤)
+// 拉取当前用户名下的设备 (devices 集合，按 owner 过滤), 返回 [{ device_id, name }]
 export async function fetchMyDevices(token, userId) {
   const filter = encodeURIComponent(`owner="${userId}"`)
   const res = await fetch(
@@ -50,5 +50,8 @@ export async function fetchMyDevices(token, userId) {
   if (res.status === 401 || res.status === 403) throw new Error('unauthorized')
   if (!res.ok) throw new Error('fetch devices failed')
   const data = await res.json()
-  return (data.items || []).map((i) => i.device_id).filter(Boolean)
+  return (data.items || []).map((i) => ({
+    device_id: i.device_id,
+    name: i.name || null
+  })).filter((d) => d.device_id)
 }

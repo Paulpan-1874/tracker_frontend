@@ -55,20 +55,70 @@ function validCoord(lat, lng) {
   return Number.isFinite(lat) && Number.isFinite(lng)
 }
 
+// 格式化定位时间为简短显示 (HH:MM)
+function formatFixTime(t) {
+  if (!t) return ''
+  const d = new Date(t)
+  if (isNaN(d.getTime())) return ''
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mm = String(d.getMinutes()).padStart(2, '0')
+  return `${hh}:${mm}`
+}
+
+// 更新 marker 的文字标签内容
+function updateMarkerLabel(marker, p, showLabels) {
+  if (!marker.setLabel) return
+  
+  if (showLabels) {
+    const label = p.name || p.imei
+    const time = formatFixTime(p.lastFix)
+    const content = `${label}${time ? ' | ' + time : ''}`
+    
+    // 设置标签到 marker 上方
+    marker.setLabel({
+      offset: new AMap.Pixel(0, -35),
+      content: `<div style="position: absolute; left: 50%; transform: translateX(-50%); top: 3px; background: rgba(15, 23, 42, 0.95); color: #fff; border-radius: 4px; padding: 2px 8px; white-space: nowrap; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4); font-size: 10px;">${content}</div>`,
+      direction: 'top'
+    })
+  } else {
+    // 清除标签 - 使用空对象确保完全移除（兼容不同浏览器）
+    marker.setLabel({})
+  }
+}
+
+// 获取当前 showLabels 值
+function getShowLabels() {
+  return showLabelsRef ? showLabelsRef.current : true
+}
+
 // 多设备总览地图：points = [{ imei, lat, lng }] (经纬度须已纠偏为 GCJ-02)
 // 空数组时展示默认地图; 新定位到达时增量点亮对应标记并自动框选视野
 // satellite 由外部 (App) 控制，切换按钮已移到顶部面板内
-export default function FleetMap({ points, satellite, hiddenPOI = true }) {
+export default function FleetMap({ points, satellite, hiddenPOI = true, showLabels = true }) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const markersRef = useRef({}) // imei -> AMap.Marker
   const satelliteRef = useRef(satellite) // 图层模式 (ref 供地图初始化读取)
   const hiddenPOIRef = useRef(hiddenPOI) // POI 显隐 (ref 供地图初始化读取)
-  const roadNetRef = useRef(null) // 卫星模式下的路网标注图层 (RoadNet: 地名+路线合层)
+  const showLabelsRef = useRef(showLabels) // 显示标签开关 (ref 避免频繁重绘)
+  const roadNetRef = useRef(null) // 卫星模式下的路网标注图层 (RoadNet: 地名 + 路线合层)
   const viewRef = useRef(null) // 图层切换重建前的视野 { center, zoom }, 重建后原样恢复
   const positionsRef = useRef({}) // imei -> "lat,lng" 上次已拉过视角的位置快照
   const [loadError, setLoadError] = useState(false)
-  const [layerEpoch, setLayerEpoch] = useState(0) // 图层切换时递增, 触发地图重建
+  const [layerEpoch, setLayerEpoch] = useState(0) // 图层切换时递增，触发地图重建
+
+  // 跟踪 showLabels 变化（不触发重绘）
+  useEffect(() => {
+    showLabelsRef.current = showLabels
+    // 立即刷新所有现有 marker 的标签状态
+    const markers = markersRef.current
+    for (const imei in markers) {
+      const p = points.find(point => point.imei === imei)
+      if (p) {
+        updateMarkerLabel(markers[imei], p, showLabels)
+      }
+    }
+  }, [showLabels])
 
   useEffect(() => {
     let cancelled = false
@@ -133,6 +183,7 @@ export default function FleetMap({ points, satellite, hiddenPOI = true }) {
         const markers = markersRef.current
         const seen = new Set()
         let hasNewMarker = false // 本次是否有新标记诞生 (决定视野调整方式)
+        // console.log('[FleetMap] showLabels:', showLabels, 'points count:', points.length)
         points.forEach((p) => {
           if (!validCoord(p.lat, p.lng)) {
             console.warn('[FleetMap] 跳过无效坐标:', p.imei, p.lat, p.lng)
@@ -142,15 +193,18 @@ export default function FleetMap({ points, satellite, hiddenPOI = true }) {
           const pos = [p.lng, p.lat]
           const marker = markers[p.imei]
           if (marker) {
-            // 位置更新: setPosition 即时跳转 (moveTo 动画在 v1.4 下会产生 NaN 错误)
+            // 位置更新：setPosition 即时跳转 (moveTo 动画在 v1.4 下会产生 NaN 错误)
             marker.setPosition(pos)
+            updateMarkerLabel(marker, p, showLabelsRef.current)
           } else {
-            // 新定位点: 直接创建在正确位置
+            // 新定位点：直接创建在正确位置
             hasNewMarker = true
+            const showLabelsValue = showLabelsRef.current
+            const title = showLabelsValue ? `${p.name || p.imei}${formatFixTime(p.lastFix) ? ' | ' + formatFixTime(p.lastFix) : ''}` : p.imei
             const m = new AMap.Marker({
               map: mapRef.current,
               position: pos,
-              title: `设备 ${p.imei}`
+              title: title
             })
             markers[p.imei] = m
           }
@@ -199,7 +253,7 @@ export default function FleetMap({ points, satellite, hiddenPOI = true }) {
     return () => {
       cancelled = true
     }
-  }, [points, layerEpoch])
+  }, [points, layerEpoch]) // 移除 showLabels 依赖
 
   // 卫星图/普通图切换: 销毁重建地图实例, 用初始化 layers 参数选择图层组合
   // (AMap v1.4 的 addLayer 动态叠加存在兼容坑, 重建最稳; 标记会随 points effect 自动重建)

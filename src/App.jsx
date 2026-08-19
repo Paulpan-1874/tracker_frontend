@@ -13,10 +13,12 @@ function Console({ auth, onLogout }) {
   const [selected, setSelected] = useState(null)
   const [drawerOpen, setDrawerOpen] = useState(false) // 面板底部抓手展开的设备抽屉
   const [satellite, setSatellite] = useState(true) // 总览地图图层模式 (按钮在顶部面板内), 默认开启卫星图
+  const [hiddenLabels, setHiddenLabels] = useState(false) // 隐藏标签文字
   const [hiddenPOI, setHiddenPOI] = useState(true) // 隐藏地名和 POI 标注
   const swipeY = useRef(null) // 抽屉手势: 记录起始触点, 下滑展开/上滑收起
   const justSwiped = useRef(false) // 手势触发后吞掉随后的 click, 避免抽屉被立刻弹回
-  const [ownedImeis, setOwnedImeis] = useState(null) // null=加载中, []=无设备
+  const [ownedImeis, setOwnedImeis] = useState(null) // null=加载中，[]=无设备
+  const [deviceNames, setDeviceNames] = useState({}) // imei -> name (PocketBase)
   const [loadError, setLoadError] = useState('')
 
   // 广播按钮状态 = Broker retained 实况 (broadcast 由订阅同步), 不存在假广播
@@ -30,8 +32,13 @@ function Console({ auth, onLogout }) {
   useEffect(() => {
     let cancelled = false
     fetchMyDevices(auth.token, auth.user.id)
-      .then((imeis) => {
-        if (!cancelled) setOwnedImeis(imeis)
+      .then((devices) => {
+        if (!cancelled) {
+          setOwnedImeis(devices.map((d) => d.device_id))
+          const map = {}
+          devices.forEach((d) => { if (d.name) map[d.device_id] = d.name })
+          setDeviceNames(map)
+        }
       })
       .catch((err) => {
         if (cancelled) return
@@ -66,12 +73,18 @@ function Console({ auth, onLogout }) {
     .map((d) => {
       const e = d.location
       if (!e) return null
-      // isFinite 严判双坐标: 拦截 null/缺失/脏字符串, 避免 NaN 流入地图触发 LngLat(NaN) 报错
+      // isFinite 严判双坐标：拦截 null/缺失/脏字符串，避免 NaN 流入地图触发 LngLat(NaN) 报错
       const lat = Number(e.lat)
       const lng = Number(e.lng)
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
       const g = wgs84ToGcj02(lat, lng)
-      return { imei: d.imei, lat: g.lat, lng: g.lng }
+      return {
+        imei: d.imei,
+        lat: g.lat,
+        lng: g.lng,
+        name: deviceNames[d.imei] || null,
+        lastFix: e.last_fix || e.time || null
+      }
     })
     .filter(Boolean)
 
@@ -99,7 +112,7 @@ function Console({ auth, onLogout }) {
     // 全屏布局: 地图铺满整个视口, 操作面板/详情页作为左侧悬浮抽屉
     <div className="app app-full">
       <div className="map-area">
-        <FleetMap points={gpsPoints} satellite={satellite} hiddenPOI={hiddenPOI} />
+        <FleetMap points={gpsPoints} satellite={satellite} hiddenPOI={hiddenPOI} showLabels={!hiddenLabels} />
       </div>
 
       {/* 浮动控制面板: 菜单行 + 定位状态灯阵 (3行×30列) + 底部抽屏抓手 */}
@@ -253,6 +266,13 @@ function Console({ auth, onLogout }) {
           </button>
           <button className="map-layer-btn" onClick={() => setSatellite(!satellite)}>
             {satellite ? '普通图' : '卫星图'}
+          </button>
+          <button 
+            className={`map-layer-btn ${hiddenLabels ? '' : 'active'}`}
+            onClick={() => setHiddenLabels(!hiddenLabels)}
+            title="点击切换显示/隐藏标签文字"
+          >
+            {hiddenLabels ? '显示名字' : '隐藏名字'}
           </button>
         </div>
       </header>
