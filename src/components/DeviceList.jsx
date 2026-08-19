@@ -52,8 +52,8 @@ function locInfo(d) {
   // 广播去重跳过 (broadcast_skipped) 不单独展示: 用户只关注定位结果,
   // 跳过意味着同一 cmd_id 已执行过, retained 里就是本次广播的真实结果, 维持原灯色即可
   const r = roundsOf(d.location)
-  if (st === 'ok') return { key: 'ok', text: r ? `定位成功:${r}` : '定位成功', dur: d.location.duration }
-  if (st === 'failed') return { key: 'failed', text: r ? `定位失败:${r}` : '定位失败', dur: d.location && d.location.duration }
+  if (st === 'ok') return { key: 'ok', text: r ? `定位成功:${r}` : '定位成功', dur: d.location.duration, lastFix: d.location.last_fix }
+  if (st === 'failed') return { key: 'failed', text: r ? `定位失败:${r}` : '定位失败', dur: d.location && d.location.duration, lastFix: d.location && d.location.last_fix }
   if (d.noResponse) return { key: 'noresp', text: '未响应', dur: null }
   return { key: 'none', text: '未定位', dur: null }
 }
@@ -61,43 +61,40 @@ function locInfo(d) {
 // 信号条：4 格，数值为 dBm RSSI，越大越高；无信号数据时全灰
 // 类似 iPhone：4 根等宽竖条，从左到右依次增高（第 1 格最矮，第 4 格最高）
 function SignalBars({ rssi }) {
-  // 未点亮格子的颜色（参考电池图标）
-  const emptyColor = 'rgba(148, 163, 184, 0.18)';
-  
+  const emptyColor = 'rgba(148, 163, 184, 0.18)'
+  // viewBox 宽度 19.2 = 4根条×间距4 + 左边距2 + 右边距1.2, 与电池图标同一套网格
+  const vbW = 19.2
+  const vbH = 11
+
   if (rssi == null) {
-    // 无信号数据：显示 4 个灰点（像 iPhone 待搜索状态）
     return (
-      <svg className="signal" viewBox="0 0 16 11" width="42" height="11" aria-hidden="true">
+      <svg className="signal" viewBox={`0 0 ${vbW} ${vbH}`} width={vbW} height={vbH} aria-hidden="true">
         {[0, 1, 2, 3].map((i) => (
-          <circle key={i} cx={i * 4 + 2} cy="8.5" r="1.8" fill={emptyColor} />
+          <circle key={i} cx={2 + i * 4 + 1.6} cy="8.5" r="1.8" fill={emptyColor} />
         ))}
       </svg>
-    );
+    )
   }
-  
-  // 计算总高度（范围 2-11px，适配电池图标高度）
-  // 电池图标总高度 11px，让最高格对齐这个高度
-  const height = Math.max(2, Math.min(11, Math.round(((rssi + 90) / 50) * 11)));
-  
-  // 第 1 格：0.25 倍高，第 2 格：0.5 倍高，第 3 格：0.75 倍高，第 4 格：1 倍高
-  const ratios = [0.25, 0.5, 0.75, 1];
-  
+
+  // 点亮格数: RSSI -90~-40dBm 映射 1~4 格 (低于 -90 只亮 1 格, 高于 -40 满 4 格)
+  const lit = Math.min(4, Math.max(1, Math.round(((rssi + 90) / 50) * 4)))
+  // 4 根条固定阶梯高度, 底边统一对齐 y=10.5
+  const heights = [2.5, 5, 7.5, 10]
+  const baseY = 10.5
+
   return (
-    <svg className="signal" viewBox="0 0 16 11" width="42" height="11" aria-hidden="true">
-      {ratios.map((ratio, i) => {
-        const barHeight = Math.floor(height * ratio);
-        return (
-          <rect
-            key={i}
-            x={2 + i * 4}
-            y={11 - barHeight}
-            width="3.2"
-            height={barHeight}
-            rx="0.5"
-            fill={barHeight > 0 ? '#fff' : emptyColor}
-          />
-        );
-      })}
+    <svg className="signal" viewBox={`0 0 ${vbW} ${vbH}`} width={vbW} height={vbH} aria-hidden="true">
+      {heights.map((h, i) => (
+        <rect
+          key={i}
+          x={2 + i * 4}
+          y={baseY - h}
+          width="3.2"
+          height={h}
+          rx="0.5"
+          fill={i < lit ? '#fff' : emptyColor}
+        />
+      ))}
     </svg>
   )
 }
@@ -183,13 +180,16 @@ export default function DeviceList({ devices, onSelect }) {
             <div className="tile-imei-row">
               <span className="tile-imei">{d.imei}</span>
             </div>
-            {/* 第三行：天线 + 定位状态（新增独立一行）*/}
+            {/* 第三行：天线图标（第一行）+ 定位状态文字（第二行）*/}
             <div className={`tile-loc tile-state-${loc.key}`}>
               <span className={`tile-loc-icon ${loc.key === 'locating' ? 'searching' : ''}`}>📡</span>
               <span className="tile-loc-info">
                 {/* 耗时行始终占位：无耗时时隐身，保证状态文字位置不跳动 */}
                 <span className={`tile-dur ${loc.dur == null ? 'dur-empty' : ''}`}>{loc.dur != null ? `${loc.dur}秒` : '秒'}</span>
-                <span className="tile-state">{loc.text}</span>
+                <span className="tile-state">
+                  {loc.text}
+                  {loc.lastFix && <span className="tile-lastfix"> · {formatLastSeen(Date.parse(loc.lastFix))}</span>}
+                </span>
               </span>
             </div>
             {/* 底部：左下角版本号（常驻），右下角时间（仅离线显示）*/}
