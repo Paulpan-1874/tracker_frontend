@@ -49,10 +49,6 @@ function Console({ auth, onLogout }) {
   const broadcastTime = broadcastActive ? broadcast.time || '' : ''
   const list = (ownedImeis || [])
     .map((imei) => devices[imei] || { imei, online: false, lastSeen: 0 })
-    .sort((a, b) => {
-      if (a.online !== b.online) return a.online ? -1 : 1
-      return b.lastSeen - a.lastSeen
-    })
     .map((d) =>
       broadcastActive
         ? { ...d, noResponse: !d.location || (d.location.time || '') < broadcastTime }
