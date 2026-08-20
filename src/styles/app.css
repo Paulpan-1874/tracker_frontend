@@ -432,8 +432,8 @@ html, body {
 /* 定位模式按钮：独立容器，悬浮在地图右下角 */
 .map-controls-2nd {
   position: absolute;
-  bottom: 50px;
-  right: 20px;
+  bottom: 8px;
+  right: 8px;
   display: flex;
   flex-direction: row;
   gap: 8px;
