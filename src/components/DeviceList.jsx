@@ -176,9 +176,13 @@ export default function DeviceList({ devices, onSelect }) {
                 )}
               </div>
             </div>
-            {/* 第二行：IMEI(自适应截断) */}
+            {/* 第二行：设备名称（如果有）或 IMEI */}
             <div className="tile-imei-row">
-              <span className="tile-imei">{d.imei}</span>
+              {d.name ? (
+                <span className="tile-name">{d.name}</span>
+              ) : (
+                <span className="tile-imei">{d.imei}</span>
+              )}
             </div>
             {/* 第三行：天线图标（第一行）+ 定位状态文字（第二行）*/}
             <div className={`tile-loc tile-state-${loc.key}`}>

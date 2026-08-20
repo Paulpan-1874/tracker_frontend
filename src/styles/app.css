@@ -155,7 +155,7 @@ html, body {
   align-items: center;
   gap: 3px;
 }
-/* 第二行：IMEI（自适应截断）*/
+/* 第二行：IMEI（自适应截断）或 名称 + IMEI */
 .tile-imei-row {
   font-size: 13px;
   font-weight: 600;
@@ -163,7 +163,7 @@ html, body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* IMEI 自适应截断 (后期支持自定义设备名) */
+/* IMEI 自适应截断 */
 .tile-imei {
   font-size: 13px;
   font-weight: 600;
@@ -171,8 +171,12 @@ html, body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  flex: 1;
-  min-width: 0;
+}
+/* 设备名称：加粗，颜色稍亮 */
+.tile-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
 }
 /* 电池图标描边跟随文字色，格色由组件内联控制 */
 .batt { color: var(--text-dim); flex-shrink: 0; }

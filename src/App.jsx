@@ -54,11 +54,18 @@ function Console({ auth, onLogout }) {
     }
   }, [auth.token, auth.user.id, onLogout])
 
-  // 名下 IMEI 与 MQTT 实时数据合并: 无上报记录的设备显示为离线占位
-  // 广播期间追加 noResponse 标记: 本次广播后从未写过 location (时间戳早于广播) = 未响应 (可能没电)
+  // 名下 IMEI 与 MQTT 实时数据合并：无上报记录的设备显示为离线占位
+  // 广播期间追加 noResponse 标记：本次广播后从未写过 location (时间戳早于广播) = 未响应 (可能没电)
   const broadcastTime = broadcastActive ? broadcast.time || '' : ''
   const list = (ownedImeis || [])
-    .map((imei) => devices[imei] || { imei, online: false, lastSeen: 0 })
+    .map((imei) => {
+      const device = devices[imei] || { imei, online: false, lastSeen: 0 }
+      // 添加设备名称到设备对象中
+      return {
+        ...device,
+        name: deviceNames[imei] || null
+      }
+    })
     .map((d) =>
       broadcastActive
         ? { ...d, noResponse: !d.location || (d.location.time || '') < broadcastTime }
