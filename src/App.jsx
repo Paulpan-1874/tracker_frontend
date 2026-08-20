@@ -263,28 +263,27 @@ function Console({ auth, onLogout }) {
             {labelMode === 2 && '关闭标签'}
           </button>
         </div>
-        {/* 定位模式按钮：第二行独立显示 */}
-        <div className="map-controls map-controls-2nd">
-          <button
-            className={`map-layer-btn loc-btn ${broadcastMode === 'once' ? 'loc-btn-lit' : ''}`}
-            onClick={() => toggleBroadcast('once')}
-            disabled={status !== 'connected'}
-          >
-            单次定位
-          </button>
-          <button
-            className={`map-layer-btn loc-btn ${broadcastMode === 'continuous' ? 'loc-btn-lit' : ''}`}
-            onClick={() => toggleBroadcast('continuous')}
-            disabled={status !== 'connected'}
-          >
-            持续定位
-          </button>
-        </div>
       </header>
-
-      {/* bottom-bar 已移除: 定位模式按钮并入顶部 map-controls */}
-
-      {/* 设备详情: 沿用左侧悬浮抽屉, 返回后重新展开设备抽屉 */}
+      
+      {/* 定位模式按钮：独立容器，悬浮在地图右下角 */}
+      <div className="map-controls-2nd">
+        <button
+          className={`map-layer-btn loc-btn ${broadcastMode === 'once' ? 'loc-btn-lit' : ''}`}
+          onClick={() => toggleBroadcast('once')}
+          disabled={status !== 'connected'}
+        >
+          单次定位
+        </button>
+        <button
+          className={`map-layer-btn loc-btn ${broadcastMode === 'continuous' ? 'loc-btn-lit' : ''}`}
+          onClick={() => toggleBroadcast('continuous')}
+          disabled={status !== 'connected'}
+        >
+          持续定位
+        </button>
+      </div>
+      
+      {/* 设备详情：沿用左侧悬浮抽屉，返回后重新展开设备抽屉 */}
       {current && (
         <aside className="panel">
           <DeviceDetail

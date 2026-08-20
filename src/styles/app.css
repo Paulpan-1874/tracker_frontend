@@ -387,12 +387,9 @@ html, body {
   border-radius: 0;
   margin-bottom: 0;
 }
-/* 卫星图/普通图切换按钮: 悬浮在地图右上角 (z-index 需高于高德内部 DOM) */
+/* 卫星图/普通图切换按钮：悬浮在地图右上角 (z-index 需高于高德内部 DOM) */
 .map-layer-btn {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 200;
+  position: relative;
   padding: 5px 12px;
   border: 1px solid rgba(148, 163, 184, 0.35);
   border-radius: 8px;
@@ -400,6 +397,12 @@ html, body {
   color: var(--text);
   font-size: 12px;
   cursor: pointer;
+}
+.topbar .map-controls .map-layer-btn,
+.topbar .map-controls-2nd .map-layer-btn {
+  position: static;
+  top: auto;
+  right: auto;
 }
 .map-layer-btn:active { opacity: 0.7; }
 /* 定位模式按钮点亮态: 亮起时呼吸闪烁 */
@@ -422,13 +425,15 @@ html, body {
   display: flex;
   gap: 6px;
 }
-/* 第二行定位按钮：在第一行下方独立一行 */
-.topbar .map-controls-2nd {
+/* 定位模式按钮：独立容器，悬浮在地图右下角 */
+.map-controls-2nd {
   position: absolute;
-  top: calc(100% + 40px); /* 第一行下方间隔 */
-  right: 0;
+  bottom: 50px;
+  right: 20px;
   display: flex;
-  gap: 6px;
+  flex-direction: row;
+  gap: 8px;
+  z-index: 200;
 }
 /* 按钮组内的按钮跟随 flex 布局，覆盖基础类的绝对定位 (否则会重叠) */
 .topbar .map-controls .map-layer-btn,
@@ -709,7 +714,7 @@ html, body {
 }
 @keyframes btn-spin { to { transform: rotate(360deg); } }
 
-/* ===== 全屏地图布局: 地图打底, 顶栏悬浮, 操作面板为左侧抽屉 ===== */
+/* ===== 全屏地图布局：地图打底，顶栏悬浮，操作面板为左侧抽屉 ===== */
 .app-full {
   position: relative;
   height: 100vh;
@@ -719,7 +724,11 @@ html, body {
   padding: 0;
   overflow: hidden;
 }
-.map-area { position: absolute; inset: 0; }
+.map-area { 
+  position: absolute; 
+  inset: 0; 
+  /* 确保 map-area 内部元素可以绝对定位 */
+}
 
 /* 左上角浮动顶栏 (z-index 需压过高德内部 DOM) */
 .topbar {
